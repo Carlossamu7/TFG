@@ -86,12 +86,6 @@ def pintaI(image, flag_color=1, image_title = "Imagen", window_title = "Ejercici
 ###   FUNCIONES   ###
 #######################
 
-def display_image(img):
-# Display a single image
-    plt.gray()
-    plt.imshow(img)
-    plt.show()
-
 def show_images(images):
 # Display all the images
     titles = ["Original", "Rows Only", "2D Haar Transform", "Return to Original"]
@@ -106,24 +100,6 @@ def show_images(images):
     fig.tight_layout()
     plt.show()
 
-""" Realiza el algoritmo Haar Wavelet de manera recursiva realizando las particiones
-adecuadas y usando la función 'haar_transform'. Devuelve una lista con la compresión.
-- list:
-- length:
-- offset:
-"""
-def list_split(list, length, offset):
-	if( length > 2 ):
-		first = list[:len(list)//2]
-		second = list[len(list)//2:]
-
-		first = haar_transform(first)
-		offset = second + offset
-		return list_split(first, length/2, offset)
-
-	else:
-		return list + offset
-
 """ Calcula la transformada de Haar de una lista. Devuelve la transformada.
 - list: lista sobre la que realizar el cálculo.
 """
@@ -137,6 +113,34 @@ def haar_transform(list):
 			difs.append((list[i] - list[i+1]) / 2)
 
 	return avgs + difs
+
+""" Realiza el algoritmo Haar Wavelet de manera recursiva realizando las particiones
+adecuadas y usando la función 'haar_transform'. Devuelve una lista con la compresión.
+- list:
+- length:
+- offset:
+"""
+def haar_split(list, length, offset):
+	if( length > 2 ):
+		first = list[:len(list)//2]
+		second = list[len(list)//2:]
+
+		first = haar_transform(first)
+		offset = second + offset
+		return haar_split(first, length/2, offset)
+
+	else:
+		return list + offset
+
+""" Calcula la transformada de Haar de una imágen.
+- img: imagen original a transformar.
+"""
+def haar_img(img):
+	haar_row = []
+	for pixels in img:
+		haar = haar_transform(pixels)
+		haar_row.append(haar_split(haar, len(haar), []))
+	return haar_row
 
 """ Calcula la transformada inversa de Haar. Devuelve la lista resultante.
 - front:
@@ -206,48 +210,23 @@ nums = [int(i) for i in string]				# nums holds the a list of ints
 og = np.array(pix_val)
 img = og.reshape(resolution, resolution)
 print(img)
-# display_image(img)
-images_list.append(img)
 
 # this gives me a list of length of dimension given, each index position holds a list of (256, 512, 1024 ...)
 split = list(zip(*[iter(nums)] * resolution))
 print("\nNumber of entries in split: " , len(split))
 print("length of items in list: " + str(len(split[0])) + "\n")
 
-offset = []
-combined = []
-print("----> First transform on Rows Only\n:")
+img_rows = np.array(haar_img(split))
+#img_rows = img_rows.reshape(resolution, resolution)
 
-for list in split:
-    haar = haar_transform(list)
-    combined.append(list_split(haar, len(haar), offset))
-
-rows = np.array(combined)
-img_rows = rows.reshape(resolution, resolution)
-print(img_rows)
-# display_image(img_rows)
-images_list.append(img_rows)
-
-print("\nThe columns of the first transform are done next")
-
-columns_rows = []
 # Transpose of img_rows
-transpose_columns = [*zip(*img_rows)]
-for column in transpose_columns:
-    haar2 = haar_transform(column)
-    columns_rows.append(list_split(haar2, len(haar2), offset))
-
-columns = np.array(columns_rows)
+transpose_columns = zip(*img_rows)
+columns = np.array(haar_img(transpose_columns))
 haar_image = columns.reshape(resolution, resolution)
-
-print(haar_image)
-# display_image(haar_image)
-images_list.append(haar_image)
 
 ################### transpose the array #########################
 rev_img = np.array(reverse_img(haar_image))
 #rev_img = rev_image.reshape(resolution, resolution)
 print(rev_img)
-# display_image(rev_img)
-images_list.append(rev_img)
-show_images(images_list)
+
+show_images([img, img_rows, haar_image, rev_img])
