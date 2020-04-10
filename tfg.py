@@ -21,9 +21,9 @@ from PIL import Image
 """
 def leer_imagen(file_name, flag_color = 1):
     if flag_color == 0:
-        print("Leyendo '" + file_name + "' en gris")
+        print("Leyendo '" + file_name + "' en gris.")
     elif flag_color==1:
-        print("Leyendo '" + file_name + "' en color")
+        print("Leyendo '" + file_name + "' en color.")
     else:
         print("flag_color debe ser 0 o 1")
 
@@ -86,12 +86,11 @@ def pintaI(image, flag_color=1, image_title = "Imagen", window_title = "Ejercici
 ###   FUNCIONES   ###
 #######################
 
-def show_images(images):
+def show_images(images, titles):
 # Display all the images
-    titles = ["Original", "Rows Only", "2D Haar Transform", "Return to Original"]
-    fig = plt.figure(figsize=(9, 9)) #(12, 3)
+    fig = plt.figure(figsize=(12, 6))
     for i, a in enumerate(images):
-        display = fig.add_subplot(2, 2, i + 1) #(1, 4, i + 1)
+        display = fig.add_subplot(1, 3, i + 1) #(1, 4, i + 1)
         display.imshow(a, interpolation="nearest", cmap=plt.cm.gray)
         display.set_title(titles[i], fontsize=10)
         display.set_xticks([])
@@ -132,15 +131,25 @@ def haar_split(list, length, offset):
 	else:
 		return list + offset
 
-""" Calcula la transformada de Haar de una imágen.
+""" Calcula la transformada de Haar por filas de una imágen.
 - img: imagen original a transformar.
 """
-def haar_img(img):
+def haar_row(img):
 	haar_row = []
 	for pixels in img:
 		haar = haar_transform(pixels)
 		haar_row.append(haar_split(haar, len(haar), []))
 	return haar_row
+
+""" Calcula la transformada de Haar una imágen.
+- img: imagen original a transformar.
+"""
+def haar_image(img, img_title):
+	print("Calculando la transformada de Haar a la imagen " + img_title +".")
+	by_row = haar_row(img)			# por filas
+	transpose = zip(*by_row)		# transponemos
+	haar_img = haar_row(transpose)	# por columnas
+	return haar_img
 
 """ Calcula la transformada inversa de Haar. Devuelve la lista resultante.
 - front:
@@ -163,14 +172,15 @@ def reverse_haar(front, the_rest, power):
 
 """ Dada una transformada de Haar de una imagen calcula su inversa.
 Devuelve la imagen original.
-- haar_image: imagen después de la transformada de Haar.
+- haar_img: imagen después de la transformada de Haar.
 """
-def reverse_img(haar_image):
+def reverse_image(haar_img, img_title):
+	print("Restaurando la imagen original de la transformada de Haar de " + img_title + ".")
 	rev_columns = []
 	power = 0
 
 	# Inversa por columnas
-	for pixels in haar_image:
+	for pixels in haar_img:
 		rev_columns.append(reverse_haar(pixels[:1], pixels[1:], power))
 
 	rev_columns = zip(*rev_columns)
@@ -186,47 +196,26 @@ def reverse_img(haar_image):
 ###       MAIN      ###
 #######################
 
-#image_chosen = input("Image name: ")
-image_chosen = "BigBoiLion.jpg"
-image_chosen = "images/" + image_chosen
-#resolution = int(input("Dimension of image (256, 512, 1024, 2048, etc.): "))
-resolution = 2048
-"""
-carlos = leer_imagen(image_chosen, 0)
-print(len(carlos))
-print(len(carlos[0]))
-pintaI(carlos, 0)
-"""
+""" Programa principal. """
+def main():
+	#img_title = input("Image name: ")
+	#img_title = "BigBoiLion.jpg"
+	img_title = "lena512.bmp"
 
-images_list = []
+	img = leer_imagen("images/" + img_title, 0)
+	print("La imagen {} tiene tamaño {}x{}.".format(img_title, len(img), len(img[0])))
 
-im = Image.open(image_chosen, 'r')			# opens an image
-pix_val = list(im.getdata())				# gets the pixels, stores them in pix_val
-line = ','.join(str(v) for v in pix_val)	# turns the list into a string object
-string = line.split(',');
-nums = [int(i) for i in string]				# nums holds the a list of ints
+	haar_img = np.array(haar_image(img, img_title))
+	rev_img = np.array(reverse_image(haar_img, img_title))
 
-# Prints original image
-og = np.array(pix_val)
-img = og.reshape(resolution, resolution)
-print(img)
+	if (True):
+		print("\nMatriz de la imagen original:")
+		print(img)
+		print("\nMatriz de la imagen restaurada:")
+		print(rev_img)
 
-# this gives me a list of length of dimension given, each index position holds a list of (256, 512, 1024 ...)
-split = list(zip(*[iter(nums)] * resolution))
-print("\nNumber of entries in split: " , len(split))
-print("length of items in list: " + str(len(split[0])) + "\n")
+	show_images([img, haar_img, rev_img],
+				titles = ["Original", "2D Haar Transform", "Return to Original"])
 
-img_rows = np.array(haar_img(split))
-#img_rows = img_rows.reshape(resolution, resolution)
-
-# Transpose of img_rows
-transpose_columns = zip(*img_rows)
-columns = np.array(haar_img(transpose_columns))
-haar_image = columns.reshape(resolution, resolution)
-
-################### transpose the array #########################
-rev_img = np.array(reverse_img(haar_image))
-#rev_img = rev_image.reshape(resolution, resolution)
-print(rev_img)
-
-show_images([img, img_rows, haar_image, rev_img])
+if __name__ == "__main__":
+	main()
