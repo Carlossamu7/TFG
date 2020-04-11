@@ -100,7 +100,7 @@ def leer_lista_imagenes(file_name_list, flag_color = 1):
 - window_title (op): título de la ventana. Por defecto 'Imágenes con títulos'
 """
 def show_images(img_list, title_list, flag_color=0, window_title="Haar Wavelets"):
-    fig = plt.figure(figsize=(12, 6))
+    fig = plt.figure(figsize=(9, 9))
     fig.canvas.set_window_title(window_title)
 
     for i in range(len(img_list)):
@@ -108,7 +108,7 @@ def show_images(img_list, title_list, flag_color=0, window_title="Haar Wavelets"
         img_list[i] = img_list[i].astype(np.uint8)
 
     for i, a in enumerate(img_list):
-        display = fig.add_subplot(1, 3, i + 1) #(1, 4, i + 1)
+        display = fig.add_subplot(2, 2, i + 1) #(1, 4, i + 1)
         if flag_color == 0:
             display.imshow(a, interpolation="nearest", cmap=plt.cm.gray)
         else:
@@ -170,8 +170,9 @@ def haar_row(img):
 
 """ Calcula la transformada de Haar una imágen.
 - img: imagen original a transformar.
+- image_title(op): título de la imagen. Por defecto 'Imagen'
 """
-def haar_image(img, img_title):
+def haar_image(img, img_title="Imagen"):
 	print("Calculando la transformada de Haar a la imagen '" + img_title +"'.")
 	by_row = haar_row(img)			# por filas
 	transpose = zip(*by_row)		# transponemos
@@ -200,8 +201,9 @@ def reverse_haar(front, the_rest, power):
 """ Dada una transformada de Haar de una imagen calcula su inversa.
 Devuelve la imagen original.
 - haar_img: imagen después de la transformada de Haar.
+- image_title(op): título de la imagen. Por defecto 'Imagen'
 """
-def reverse_image(haar_img, img_title):
+def reverse_image(haar_img, img_title="Imagen"):
 	print("Restaurando la imagen original de la transformada de Haar de '" + img_title + "'.")
 	rev_columns = []
 	power = 0
@@ -219,6 +221,28 @@ def reverse_image(haar_img, img_title):
 
 	return rev_haar
 
+""" Asigna 0 a aquellos elementos que estén por debajo de un umbral.
+Devuelve la imagen después de aplicar el threesholding.
+- haar_img: imagen después de la transformada de Haar.
+- epsilon: valor umbral.
+- image_title(op): título de la imagen. Por defecto 'Imagen'
+"""
+def threesholding(haar_img, epsilon, img_title="Imagen"):
+    print("Aplicando algoritmo threesholding a la transformada de Haar de '" + img_title + "'.")
+    threeshold_img = haar_img.copy()
+    count = 0
+
+    for i in range(len(haar_img)):
+        for j in range(len(haar_img[0])):
+            if abs(haar_img[i][j]) < epsilon:
+                threeshold_img[i][j] = 0.0
+                count = count + 1
+
+    print("Número de píxeles anulados: {} ({}%)."
+        .format(count, round(100*count/(len(haar_img)*len(haar_img[0])), 2)))
+
+    return threeshold_img
+
 #######################
 ###       MAIN      ###
 #######################
@@ -228,23 +252,31 @@ def main():
     #img_title = input("Image name: ")
     img_title = "BigBoiLion.jpg"
     #img_title = "lena512.bmp"
+    epsilon = 1.0
 
     img = leer_imagen("images/" + img_title, 0)
     print("La imagen '{}' tiene tamaño {}x{}.".format(img_title, len(img), len(img[0])))
 
+    # Calculando la transformada de Haar
     haar_img = np.array(haar_image(img, img_title))
-    rev_img = np.array(reverse_image(haar_img, img_title))
+    # Aplicándole el algoritmo threesholding
+    threeshold_img = np.array(threesholding(haar_img, epsilon, img_title))
+    # Restaurando la imagen original
+    rev_img = np.array(reverse_image(threeshold_img, img_title))
 
     if (True):
         print("\nMatriz de la imagen original:")
         print(img)
         print("\nMatriz después de la transformada de Haar:")
         print(haar_img)
+        print("\nMatriz después del threesholding:")
+        print(threeshold_img)
         print("\nMatriz de la imagen restaurada:")
         print(rev_img)
+        print()
 
-    show_images([img, haar_img, rev_img],
-                ["Original", "2D Haar Transform", "Return to Original"])
+    show_images([img, haar_img, threeshold_img, rev_img],
+                ["Original", "2D Haar Transform", "threesholding", "Return to Original"])
 
 if __name__ == "__main__":
 	main()
