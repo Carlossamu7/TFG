@@ -236,12 +236,58 @@ def threesholding(haar_img, epsilon, img_title="Imagen"):
         for j in range(len(haar_img[0])):
             if abs(haar_img[i][j]) < epsilon:
                 threeshold_img[i][j] = 0.0
-                count = count + 1
+                count += 1
 
     print("Número de píxeles anulados: {} ({}%)."
         .format(count, round(100*count/(len(haar_img)*len(haar_img[0])), 2)))
 
     return threeshold_img
+
+""" Se queda con la mejor aproximación de m-términos.
+Devuelve la imagen después de aplicar el algoritmo.
+- haar_img: imagen después de la transformada de Haar.
+- m: número de términos que nos vamos a quedar.
+- image_title(op): título de la imagen. Por defecto 'Imagen'
+"""
+def m_term(haar_img, m, img_title="Imagen"):
+    print("Aplicando algoritmo de m-términos a la transformada de Haar de '" + img_title + "'.")
+    m_term_img = haar_img.copy()
+    delete = len(haar_img)*len(haar_img[0]) - m
+
+    while (delete>0):
+        min = 100; x_min=0; y_min=0
+
+        for i in range(len(m_term_img)):
+            for j in range(len(m_term_img[0])):
+                if abs(m_term_img[i][j]) < min:
+                    min = m_term_img[i][j]
+                    x_min = i
+                    y_min = j
+        m_term_img[x_min][y_min] = 0.0
+        if (min==100):
+            delete = 0
+        else:
+            delete -= 1
+
+    print("Número de píxeles anulados: {} ({}%)."
+        .format(delete, round(100*delete/(len(haar_img)*len(haar_img[0])), 2)))
+
+    return m_term_img
+
+""" Calcula el error medio de la imagen original y su aproximación.
+Devuelve el error medio.
+- img: imagen original.
+- back_img: imagen aproximada.
+- image_title(op): título de la imagen. Por defecto 'Imagen'
+"""
+def error(img, back_img, img_title="Imagen"):
+    print("Calculando el error medio de '" + img_title + "' y su aproximación.")
+    error = 0
+    for i in range(len(img)):
+        for j in range(len(img[0])):
+            error += abs(img[i][j]-back_img[i][j])
+    return error / (len(img)*len(img[0]))
+
 
 #######################
 ###       MAIN      ###
@@ -253,30 +299,37 @@ def main():
     img_title = "BigBoiLion.jpg"
     #img_title = "lena512.bmp"
     epsilon = 1.0
+    m = 1000000
 
     img = leer_imagen("images/" + img_title, 0)
     print("La imagen '{}' tiene tamaño {}x{}.".format(img_title, len(img), len(img[0])))
 
     # Calculando la transformada de Haar
     haar_img = np.array(haar_image(img, img_title))
-    # Aplicándole el algoritmo threesholding
-    threeshold_img = np.array(threesholding(haar_img, epsilon, img_title))
+    # Aplicándole el algoritmo greedy
+    greedy_img = np.array(threesholding(haar_img, epsilon, img_title))
+    #greedy_img = np.array(m_term(haar_img, m, img_title))
     # Restaurando la imagen original
-    rev_img = np.array(reverse_image(threeshold_img, img_title))
+    rev_img = np.array(reverse_image(greedy_img, img_title))
 
     if (True):
         print("\nMatriz de la imagen original:")
         print(img)
         print("\nMatriz después de la transformada de Haar:")
         print(haar_img)
-        print("\nMatriz después del threesholding:")
-        print(threeshold_img)
+        print("\nMatriz después del algoritmo greedy:")
+        print(greedy_img)
         print("\nMatriz de la imagen restaurada:")
         print(rev_img)
         print()
 
-    show_images([img, haar_img, threeshold_img, rev_img],
-                ["Original", "2D Haar Transform", "threesholding", "Return to Original"])
+    # Calulamos el error medio de la imagen original y la greedy
+    err = error(img, rev_img, img_title)
+    print("Error medio: {}.".format(round(err, 4)))
+
+    # Mostramos diferentes imágenes
+    show_images([img, haar_img, greedy_img, rev_img],
+                ["Original", "2D Haar Transform", "Greedy", "Return to Original"])
 
 if __name__ == "__main__":
 	main()
