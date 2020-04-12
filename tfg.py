@@ -124,10 +124,14 @@ def show_img_list(img_list, title_list, flag_color=0, window_title="Haar Wavelet
 """ Guarda la imagen en el file_name proporcionado.
 - file_name: archivo donde guardar la imagen.
 - img: imagen a guardar.
+- normalize: indica si normalizar la imagen antes de guardarla.
 """
-def save_img(file_name, img):
+def save_img(file_name, img, normalize=False):
     print("Guardando imagen '" + file_name + "'.")
-    im = normaliza(img, file_name)
+    if(normalize):
+        im = normaliza(img, file_name)
+    else:
+        im = img.copy()
     im=np.array(im, dtype=np.uint8)
     if(len(im.shape)==3):
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
@@ -181,21 +185,22 @@ def haar_row(img):
 """ Calcula la transformada de Haar una imágen.
 - img: imagen original a transformar.
 - image_title(op): título de la imagen. Por defecto 'Imagen'.
-- show (op): mostrar mensaje de texto. Por defecto True.
 """
-def haar_image(img, img_title="Imagen", show=True):
-    if(show):
+def haar_image(img, img_title="Imagen"):
+    if(img_title != ""):
         print("Calculando la transformada de Haar a la imagen '" + img_title +"'.")
 
     if(len(img.shape)==2):
-        by_row = haar_row(img)			# por filas
-        transpose = zip(*by_row)		# transponemos
-        haar_img = haar_row(transpose)	# por columnas
+        by_row = haar_row(img)              # por filas
+        haar_img = zip(*by_row)             # transponemos
+        haar_img = haar_row(haar_img)       # por columnas
+        haar_img = np.array(haar_img)
+        haar_img = np.transpose(haar_img) # transponemos
     else:
         haar_img = np.zeros(img.shape)
         for k in range(3):
-            haar_img[:,:,k] = haar_image(img[:,:,k], img_title, False)
-    return np.array(haar_img)
+            haar_img[:,:,k] = haar_image(img[:,:,k], "")
+    return haar_img
 
 """ Calcula la transformada inversa de Haar. Devuelve la lista resultante.
 - front: primera parte de la lista.
@@ -220,10 +225,9 @@ def reverse_haar(front, the_rest, power):
 Devuelve la imagen original.
 - haar_img: imagen después de la transformada de Haar.
 - image_title(op): título de la imagen. Por defecto 'Imagen'.
-- show (op): mostrar mensaje de texto. Por defecto True.
 """
-def reverse_image(haar_img, img_title="Imagen", show=True):
-    if(show):
+def reverse_image(haar_img, img_title="Imagen"):
+    if(img_title != ""):
         print("Restaurando la imagen original de la transformada de Haar de '" + img_title + "'.")
 
     if(len(haar_img.shape)==2):
@@ -242,6 +246,7 @@ def reverse_image(haar_img, img_title="Imagen", show=True):
             rev_haar.append(reverse_haar(pixels[:1], pixels[1:], power))
 
         rev_haar = np.array(rev_haar)
+        rev_haar = np.transpose(rev_haar)
 
         #rev_haar = normaliza(np.array(rev_haar))
         #rev_haar = rev_haar.astype(np.uint8)
@@ -250,7 +255,7 @@ def reverse_image(haar_img, img_title="Imagen", show=True):
     else:
         rev_haar = np.zeros(haar_img.shape)
         for k in range(3):
-            rev_haar[:,:,k] = reverse_image(haar_img[:,:,k], img_title, False)
+            rev_haar[:,:,k] = reverse_image(haar_img[:,:,k], "")
 
     return rev_haar
 
@@ -261,7 +266,8 @@ Devuelve la imagen después de aplicar el threesholding.
 - image_title(op): título de la imagen. Por defecto 'Imagen'
 """
 def threesholding(haar_img, epsilon, img_title="Imagen"):
-    print("Aplicando algoritmo threesholding a la transformada de Haar de '" + img_title + "'.")
+    print("Aplicando algoritmo threesholding con epsilon={} a la transformada de Haar de '{}'."
+          .format(epsilon, img_title))
     threeshold_img = haar_img.copy()
     count = 0
 
@@ -359,9 +365,9 @@ def crop_img(img, sq=False, img_title="Imagen"):
         else: p=q
 
     if(len(img.shape)==3):
-        print("Recortando imagen '{}' a tamaño {}x{}x3".format(img_title, p, q))
+        print("Recortando imagen '{}' a tamaño ({}, {}, 3).".format(img_title, p, q))
     else:
-        print("Recortando imagen '{}' a tamaño {}x{}".format(img_title, p, q))
+        print("Recortando imagen '{}' a tamaño ({}, {}).".format(img_title, p, q))
 
     a = int((len(img)-p)/2)
     b = int((len(img[0])-q)/2)
@@ -377,31 +383,52 @@ Devuelve la imagen extendida.
 def extend_img(img, sq=False, img_title="Imagen"):
     n = math.log(len(img), 2)
     m = math.log(len(img[0]), 2)
+    to_extend = False
 
-    if(int(n)<n): n = int(n) + 1
-    else: n = int(n)
-    if(int(m)<m): m = int(m) + 1
-    else: m = int(m)
-
-    p = 2**n
-    q = 2**m
-
-    if(sq):     # ajustamos p y q en caso de ser cuadrada
-        if(p>q): q=p
-        else: p=q
-
-    if(len(img.shape)==3):
-        print("Extendiendo imagen '{}' a tamaño {}x{}x3".format(img_title, p, q))
-        ext = np.zeros((p, q, 3), dtype=np.uint8)
+    if(int(n)<n):
+        n = int(n) + 1
+        to_extend = True
     else:
-        print("Extendiendo imagen '{}' a tamaño {}x{}".format(img_title, p, q))
-        ext = np.zeros((p, q), dtype=np.uint8)
+        n = int(n)
+    if(int(m)<m):
+        m = int(m) + 1
+        to_extend = True
+    else:
+        m = int(m)
 
-    for i in range(len(img)):
-        for j in range(len(img[0])):
-            ext[i][j] = img[i][j]
+    if(to_extend):
+        p = 2**n
+        q = 2**m
 
-    return ext
+        if(sq):     # ajustamos p y q en caso de ser cuadrada
+            if(p>q): q=p
+            else: p=q
+
+        if(len(img.shape)==3):
+            print("Extendiendo imagen '{}' a tamaño ({}, {}, 3).".format(img_title, p, q))
+            ext = np.zeros((p, q, 3), dtype=np.float64)
+        else:
+            print("Extendiendo imagen '{}' a tamaño ({}, {}).".format(img_title, p, q))
+            ext = np.zeros((p, q), dtype=np.float64)
+
+        for i in range(len(img)):
+            for j in range(len(img[0])):
+                ext[i][j] = img[i][j]
+
+        return ext
+    else:
+        return img
+
+""" Recorta una imagen a la de tamaño 2^p*2^q más grande dentro de ella.
+Devuelve la imagen recortada.
+- img: imagen a recortar.
+- rows:
+- cols:
+- image_title(op): título de la imagen. Por defecto 'Imagen'.
+"""
+def crop_size(img, rows, cols, img_title="Imagen"):
+    print("Recortando imagen '{}' a tamaño {}.".format(img_title, img.shape))
+    return img[:rows, :cols]
 
 """ Imprime por pantalla el tamaño en bytes de los archivos.
 - file_org: archivo original.
@@ -411,31 +438,26 @@ def diff_size(file_org, file_rev):
     print("El archivo original pesa {} bytes y el greedy {} bytes."
           .format(os.stat(file_org).st_size, os.stat(file_rev).st_size))
 
-def prueba():
-    img = read_img("images/" + img_title, 1)
-    img = extend_img(img, sq=False)
-    show_img(img)
-    #save_img(img_title, img)
-
-
 #######################
 ###       MAIN      ###
 #######################
 
 """ Programa principal. """
 def main():
-    #img_title = input("Image name: ")
-    #img_title = "BigBoiLion.jpg"
+    img_title = "BigBoiLion.jpg"
     #img_title = "lena512.bmp"
     #img_title = "alham.jpg"
-    img_title = "alham_sq.png"
+    #img_title = "alham_crop.jpg"
+    #img_title = "alham_sq.png"
     epsilon = 2.0
     m = 1000000
 
-    img = read_img("images/" + img_title, 1)
+    img = read_img("images/" + img_title, 0)
+    print("Tamaño de la imagen: {}.".format(img.shape))
+    ext = extend_img(img, False, img_title)
 
     # Calculando la transformada de Haar
-    haar_img = haar_image(img, img_title)
+    haar_img = haar_image(ext, img_title)
     # Aplicándole el algoritmo greedy
     greedy_img = threesholding(haar_img, epsilon, img_title)
     #greedy_img = np.array(m_term(haar_img, m, img_title))
@@ -460,12 +482,15 @@ def main():
     err = error(img, rev_img, img_title)
     print("Error medio: {}.".format(round(err, 4)))
 
+    if(rev_img.shape != img.shape):
+        rev_img = crop_size(rev_img, img.shape[0], img.shape[1], img_title)
+
     # Mostramos diferentes imágenes
     show_img_list([img, haar_img, greedy_img, rev_img],
                 ["Original", "2D Haar Transform", "Greedy", "Return to Original"])
 
-    save_img("images/rev_" + img_title, rev_img)
-    save_img("images/greedy_" + img_title, greedy_img)
+    save_img("images/rev_" + img_title, rev_img, True)
+    save_img("images/greedy_" + img_title, greedy_img, False)
 
     diff_size("images/" + img_title, "images/greedy_" + img_title)
 
