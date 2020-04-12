@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import math
 import cv2
+import os
 
 ###########################################
 ###   LECTURA E IMPRESIÓN DE IMÁGENES   ###
@@ -38,6 +39,7 @@ def leer_imagen(file_name, flag_color = 1):
 - image_title (op): título de la imagen. Por defecto ' '.
 """
 def normaliza(image, image_title = " "):
+    norm = np.copy(image)
     # En caso de que los máximos sean 255 o las mínimos 0 no iteramos en los bucles
     if len(image.shape) == 2:
         max = np.amax(image)
@@ -46,7 +48,7 @@ def normaliza(image, image_title = " "):
             print("Normalizando imagen '" + image_title + "'")
             for i in range(image.shape[0]):
                 for j in range(image.shape[1]):
-                    image[i][j] = (image[i][j]-min)/(max-min) * 255
+                    norm[i][j] = (image[i][j]-min)/(max-min) * 255
     elif len(image.shape) == 3:
         max = [np.amax(image[:,:,0]), np.amax(image[:,:,1]), np.amax(image[:,:,2])]
         min = [np.amin(image[:,:,0]), np.amin(image[:,:,1]), np.amin(image[:,:,2])]
@@ -56,9 +58,9 @@ def normaliza(image, image_title = " "):
             for i in range(image.shape[0]):
                 for j in range(image.shape[1]):
                     for k in range(image.shape[2]):
-                        image[i][j][k] = (image[i][j][k]-min[k])/(max[k]-min[k]) * 255
+                        norm[i][j][k] = (image[i][j][k]-min[k])/(max[k]-min[k]) * 255
 
-    return image
+    return norm
 
 """ Imprime una imagen a través de una matriz.
 - image: imagen a imprimir.
@@ -67,18 +69,17 @@ def normaliza(image, image_title = " "):
 - window_title (op): título de la ventana. Por defecto 'Ejercicio'
 """
 def pintaI(image, flag_color=1, image_title = "Imagen", window_title = "Ejercicio"):
-    image = normaliza(image, image_title)               # Normalizamos la matriz
-    image = image.astype(np.uint8)
+    img_show = normaliza(image, image_title)            # Normalizamos la matriz
+    img_show = img_show.astype(np.uint8)
     plt.figure(0).canvas.set_window_title(window_title) # Ponemos nombre a la ventana
     if flag_color == 0:
-        plt.imshow(image, cmap = "gray")
+        plt.imshow(img_show, cmap = "gray")
     else:
-        plt.imshow(image)
+        plt.imshow(img_show)
     plt.title(image_title)              # Ponemos nombre a la imagen
     plt.xticks([])                      # Se le pasa una lista de posiciones en las que se deben colocar los
     plt.yticks([])                      # ticks, si pasamos una lista vacía deshabilitamos los xticks e yticks
     plt.show()
-    image = image.astype(np.float64)    # Devolvemos su formato
 
 """ Lee una lista de imágenes ya sea en grises o en color. Devuelve la lista de imágenes leída.
 - image_list: lista de imágenes a concatenar.
@@ -102,12 +103,12 @@ def leer_lista_imagenes(file_name_list, flag_color = 1):
 def show_images(img_list, title_list, flag_color=0, window_title="Haar Wavelets"):
     fig = plt.figure(figsize=(9, 9))
     fig.canvas.set_window_title(window_title)
+    img_show_list = []
 
     for i in range(len(img_list)):
-        normaliza(img_list[i], title_list[i])
-        img_list[i] = img_list[i].astype(np.uint8)
+        img_show_list.append(normaliza(img_list[i], title_list[i]).astype(np.uint8))
 
-    for i, a in enumerate(img_list):
+    for i, a in enumerate(img_show_list):
         display = fig.add_subplot(2, 2, i + 1) #(1, 4, i + 1)
         if flag_color == 0:
             display.imshow(a, interpolation="nearest", cmap=plt.cm.gray)
@@ -120,8 +121,13 @@ def show_images(img_list, title_list, flag_color=0, window_title="Haar Wavelets"
     fig.tight_layout()
     plt.show()
 
-    for i in range(len(img_list)):
-        img_list[i] = img_list[i].astype(np.float64)    # lo devolvemos a su formato.
+""" Guarda la imagen en el file_name proporcionado.
+- file_name: archivo donde guardar la imagen.
+- img: imagen a guardar.
+"""
+def save_img(file_name, img):
+    print("Guardando imagen '" + file_name + "'.")
+    cv2.imwrite(file_name, img)
 
 #######################
 ###   FUNCIONES   ###
@@ -177,7 +183,7 @@ def haar_image(img, img_title="Imagen"):
 	by_row = haar_row(img)			# por filas
 	transpose = zip(*by_row)		# transponemos
 	haar_img = haar_row(transpose)	# por columnas
-	return haar_img
+	return np.array(haar_img)
 
 """ Calcula la transformada inversa de Haar. Devuelve la lista resultante.
 - front: primera parte de la lista.
@@ -204,22 +210,26 @@ Devuelve la imagen original.
 - image_title(op): título de la imagen. Por defecto 'Imagen'
 """
 def reverse_image(haar_img, img_title="Imagen"):
-	print("Restaurando la imagen original de la transformada de Haar de '" + img_title + "'.")
-	rev_columns = []
-	power = 0
+    print("Restaurando la imagen original de la transformada de Haar de '" + img_title + "'.")
+    rev_columns = []
+    power = 0
 
-	# Inversa por columnas
-	for pixels in haar_img:
-		rev_columns.append(reverse_haar(pixels[:1], pixels[1:], power))
+    # Inversa por columnas
+    for pixels in haar_img:
+        rev_columns.append(reverse_haar(pixels[:1], pixels[1:], power))
 
-	rev_columns = zip(*rev_columns)
-	rev_haar = []
+    rev_columns = zip(*rev_columns)
+    rev_haar = []
 
-	# Inversa por filas
-	for pixels in rev_columns:
-		rev_haar.append(reverse_haar(pixels[:1], pixels[1:], power))
+    # Inversa por filas
+    for pixels in rev_columns:
+        rev_haar.append(reverse_haar(pixels[:1], pixels[1:], power))
 
-	return rev_haar
+    #rev_haar = normaliza(np.array(rev_haar))
+    #rev_haar = rev_haar.astype(np.uint8)
+    #rev_haar = rev_haar.astype(np.float64)
+
+    return np.array(rev_haar)
 
 """ Asigna 0 a aquellos elementos que estén por debajo de un umbral.
 Devuelve la imagen después de aplicar el threesholding.
@@ -278,7 +288,7 @@ def m_term(haar_img, m, img_title="Imagen"):
 Devuelve el error medio.
 - img: imagen original.
 - back_img: imagen aproximada.
-- image_title(op): título de la imagen. Por defecto 'Imagen'
+- image_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def error(img, back_img, img_title="Imagen"):
     print("Calculando el error medio de '" + img_title + "' y su aproximación.")
@@ -287,6 +297,75 @@ def error(img, back_img, img_title="Imagen"):
         for j in range(len(img[0])):
             error += abs(img[i][j]-back_img[i][j])
     return error / (len(img)*len(img[0]))
+
+""" Recorta una imagen a la de tamaño 2^p*2^q más grande dentro de ella.
+Devuelve la imagen recortada.
+- img: imagen a recortar.
+- sq (op): indica si extender de manera cuadrada. Por defecto False.
+- image_title(op): título de la imagen. Por defecto 'Imagen'.
+"""
+def crop_img(img, sq=False, img_title="Imagen"):
+    p = 2**int(math.log(len(img), 2))
+    q = 2**int(math.log(len(img[0]), 2))
+    print(p)
+    print(q)
+
+    if(sq):     # ajustamos p y q en caso de ser cuadrada
+        if(p<q): q=p
+        else: p=q
+
+    if(len(img.shape)==3):
+        print("Recortando imagen '{}' a tamaño {}x{}x3".format(img_title, p, q))
+    else:
+        print("Recortando imagen '{}' a tamaño {}x{}".format(img_title, p, q))
+
+    a = int((len(img)-p)/2)
+    b = int((len(img[0])-q)/2)
+
+    return img[a:(a+p), b:(b+q)]
+
+""" Extiende a la imagen de tamaño 2^p*2^q más pequeña dentro de la que cabe.
+Devuelve la imagen extendida.
+- img: imagen a extender.
+- sq (op): indica si extender de manera cuadrada. Por defecto False.
+- image_title(op): título de la imagen. Por defecto 'Imagen'.
+"""
+def extend_img(img, sq=False, img_title="Imagen"):
+    n = math.log(len(img), 2)
+    m = math.log(len(img[0]), 2)
+
+    if(int(n)<n): n = int(n) + 1
+    else: n = int(n)
+    if(int(m)<m): m = int(m) + 1
+    else: m = int(m)
+
+    p = 2**n
+    q = 2**m
+
+    if(sq):     # ajustamos p y q en caso de ser cuadrada
+        if(p>q): q=p
+        else: p=q
+
+    if(len(img.shape)==3):
+        print("Extendiendo imagen '{}' a tamaño {}x{}x3".format(img_title, p, q))
+        ext = np.zeros((p, q, 3), dtype=np.uint8)
+    else:
+        print("Extendiendo imagen '{}' a tamaño {}x{}".format(img_title, p, q))
+        ext = np.zeros((p, q), dtype=np.uint8)
+
+    for i in range(len(img)):
+        for j in range(len(img[0])):
+            ext[i][j] = img[i][j]
+
+    return ext
+
+""" Imprime por pantalla el tamaño en bytes de los archivos.
+- file_org: archivo original.
+- file_rev: arhivo greedy.
+"""
+def diff_size(file_org, file_rev):
+    print("El archivo original pesa {} bytes y el greedy {} bytes."
+          .format(os.stat(file_org).st_size, os.stat(file_rev).st_size))
 
 
 #######################
@@ -298,19 +377,22 @@ def main():
     #img_title = input("Image name: ")
     img_title = "BigBoiLion.jpg"
     #img_title = "lena512.bmp"
+    #img_title = "alham.jpg"
     epsilon = 1.0
     m = 1000000
 
     img = leer_imagen("images/" + img_title, 0)
-    print("La imagen '{}' tiene tamaño {}x{}.".format(img_title, len(img), len(img[0])))
 
     # Calculando la transformada de Haar
-    haar_img = np.array(haar_image(img, img_title))
+    haar_img = haar_image(img, img_title)
     # Aplicándole el algoritmo greedy
-    greedy_img = np.array(threesholding(haar_img, epsilon, img_title))
+    greedy_img = threesholding(haar_img, epsilon, img_title)
     #greedy_img = np.array(m_term(haar_img, m, img_title))
     # Restaurando la imagen original
-    rev_img = np.array(reverse_image(greedy_img, img_title))
+    rev_img = reverse_image(greedy_img, img_title)
+
+    #greedy_img = greedy_img.astype(np.uint8)
+    #greedy_img = greedy_img.astype(np.float64)
 
     if (True):
         print("\nMatriz de la imagen original:")
@@ -330,6 +412,11 @@ def main():
     # Mostramos diferentes imágenes
     show_images([img, haar_img, greedy_img, rev_img],
                 ["Original", "2D Haar Transform", "Greedy", "Return to Original"])
+
+    save_img("images/rev_" + img_title, rev_img)
+    save_img("images/greedy_" + img_title, greedy_img)
+
+    diff_size("images/" + img_title, "images/greedy_" + img_title)
 
 if __name__ == "__main__":
 	main()
