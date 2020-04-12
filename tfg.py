@@ -18,7 +18,7 @@ import os
 - file_name: archivo de la imagen.
 - flag_color (op): modo en el que se va a leer la imagen -> grises o color. Por defecto será en color.
 """
-def leer_imagen(file_name, flag_color = 1):
+def read_img(file_name, flag_color = 1):
     if flag_color == 0:
         print("Leyendo '" + file_name + "' en gris.")
     elif flag_color==1:
@@ -68,7 +68,7 @@ def normaliza(image, image_title = " "):
 - image_title(op): título de la imagen. Por defecto 'Imagen'
 - window_title (op): título de la ventana. Por defecto 'Ejercicio'
 """
-def pintaI(image, flag_color=1, image_title = "Imagen", window_title = "Ejercicio"):
+def show_img(image, flag_color=1, image_title = "Imagen", window_title = "Ejercicio"):
     img_show = normaliza(image, image_title)            # Normalizamos la matriz
     img_show = img_show.astype(np.uint8)
     plt.figure(0).canvas.set_window_title(window_title) # Ponemos nombre a la ventana
@@ -85,11 +85,11 @@ def pintaI(image, flag_color=1, image_title = "Imagen", window_title = "Ejercici
 - image_list: lista de imágenes a concatenar.
 - flag_color (op): modo en el que se van a leer las imágenes. Por defecto en color.
 """
-def leer_lista_imagenes(file_name_list, flag_color = 1):
+def read_img_list(file_name_list, flag_color = 1):
     image_list = []
 
     for i in file_name_list:
-        img = leer_imagen(i, flag_color)
+        img = read_img(i, flag_color)
         image_list.append(img)
 
     return image_list
@@ -100,7 +100,7 @@ def leer_lista_imagenes(file_name_list, flag_color = 1):
 - flag_color (op): bandera para indicar si la imagen es en B/N o color. Por defecto color.
 - window_title (op): título de la ventana. Por defecto 'Imágenes con títulos'
 """
-def show_images(img_list, title_list, flag_color=0, window_title="Haar Wavelets"):
+def show_img_list(img_list, title_list, flag_color=0, window_title="Haar Wavelets"):
     fig = plt.figure(figsize=(9, 9))
     fig.canvas.set_window_title(window_title)
     img_show_list = []
@@ -127,7 +127,11 @@ def show_images(img_list, title_list, flag_color=0, window_title="Haar Wavelets"
 """
 def save_img(file_name, img):
     print("Guardando imagen '" + file_name + "'.")
-    cv2.imwrite(file_name, img)
+    im = normaliza(img, file_name)
+    im=np.array(im, dtype=np.uint8)
+    if(len(im.shape)==3):
+        im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+    cv2.imwrite(file_name, im)
 
 #######################
 ###   FUNCIONES   ###
@@ -176,14 +180,22 @@ def haar_row(img):
 
 """ Calcula la transformada de Haar una imágen.
 - img: imagen original a transformar.
-- image_title(op): título de la imagen. Por defecto 'Imagen'
+- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- show (op): mostrar mensaje de texto. Por defecto True.
 """
-def haar_image(img, img_title="Imagen"):
-	print("Calculando la transformada de Haar a la imagen '" + img_title +"'.")
-	by_row = haar_row(img)			# por filas
-	transpose = zip(*by_row)		# transponemos
-	haar_img = haar_row(transpose)	# por columnas
-	return np.array(haar_img)
+def haar_image(img, img_title="Imagen", show=True):
+    if(show):
+        print("Calculando la transformada de Haar a la imagen '" + img_title +"'.")
+
+    if(len(img.shape)==2):
+        by_row = haar_row(img)			# por filas
+        transpose = zip(*by_row)		# transponemos
+        haar_img = haar_row(transpose)	# por columnas
+    else:
+        haar_img = np.zeros(img.shape)
+        for k in range(3):
+            haar_img[:,:,k] = haar_image(img[:,:,k], img_title, False)
+    return np.array(haar_img)
 
 """ Calcula la transformada inversa de Haar. Devuelve la lista resultante.
 - front: primera parte de la lista.
@@ -207,29 +219,40 @@ def reverse_haar(front, the_rest, power):
 """ Dada una transformada de Haar de una imagen calcula su inversa.
 Devuelve la imagen original.
 - haar_img: imagen después de la transformada de Haar.
-- image_title(op): título de la imagen. Por defecto 'Imagen'
+- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- show (op): mostrar mensaje de texto. Por defecto True.
 """
-def reverse_image(haar_img, img_title="Imagen"):
-    print("Restaurando la imagen original de la transformada de Haar de '" + img_title + "'.")
-    rev_columns = []
-    power = 0
+def reverse_image(haar_img, img_title="Imagen", show=True):
+    if(show):
+        print("Restaurando la imagen original de la transformada de Haar de '" + img_title + "'.")
 
-    # Inversa por columnas
-    for pixels in haar_img:
-        rev_columns.append(reverse_haar(pixels[:1], pixels[1:], power))
+    if(len(haar_img.shape)==2):
+        rev_columns = []
+        power = 0
 
-    rev_columns = zip(*rev_columns)
-    rev_haar = []
+        # Inversa por columnas
+        for pixels in haar_img:
+            rev_columns.append(reverse_haar(pixels[:1], pixels[1:], power))
 
-    # Inversa por filas
-    for pixels in rev_columns:
-        rev_haar.append(reverse_haar(pixels[:1], pixels[1:], power))
+        rev_columns = zip(*rev_columns)
+        rev_haar = []
 
-    #rev_haar = normaliza(np.array(rev_haar))
-    #rev_haar = rev_haar.astype(np.uint8)
-    #rev_haar = rev_haar.astype(np.float64)
+        # Inversa por filas
+        for pixels in rev_columns:
+            rev_haar.append(reverse_haar(pixels[:1], pixels[1:], power))
 
-    return np.array(rev_haar)
+        rev_haar = np.array(rev_haar)
+
+        #rev_haar = normaliza(np.array(rev_haar))
+        #rev_haar = rev_haar.astype(np.uint8)
+        #rev_haar = rev_haar.astype(np.float64)
+
+    else:
+        rev_haar = np.zeros(haar_img.shape)
+        for k in range(3):
+            rev_haar[:,:,k] = reverse_image(haar_img[:,:,k], img_title, False)
+
+    return rev_haar
 
 """ Asigna 0 a aquellos elementos que estén por debajo de un umbral.
 Devuelve la imagen después de aplicar el threesholding.
@@ -242,14 +265,26 @@ def threesholding(haar_img, epsilon, img_title="Imagen"):
     threeshold_img = haar_img.copy()
     count = 0
 
-    for i in range(len(haar_img)):
-        for j in range(len(haar_img[0])):
-            if abs(haar_img[i][j]) < epsilon:
-                threeshold_img[i][j] = 0.0
-                count += 1
+    if(len(haar_img.shape)==2):
+        for i in range(len(haar_img)):
+            for j in range(len(haar_img[0])):
+                if abs(haar_img[i][j]) < epsilon:
+                    threeshold_img[i][j] = 0.0
+                    count += 1
 
-    print("Número de píxeles anulados: {} ({}%)."
-        .format(count, round(100*count/(len(haar_img)*len(haar_img[0])), 2)))
+        print("Número de píxeles anulados: {} ({}%)."
+            .format(count, round(100*count/(len(haar_img)*len(haar_img[0])), 2)))
+
+    else:
+        for i in range(len(haar_img)):
+            for j in range(len(haar_img[0])):
+                for k in range(len(haar_img[0][0])):
+                    if abs(haar_img[i][j][k]) < epsilon:
+                        threeshold_img[i][j][k] = 0.0
+                        count += 1
+
+        print("Número de píxeles anulados: {} ({}%)."
+            .format(count, round(100*count/(len(haar_img)*len(haar_img[0])*len(haar_img[0][0])), 2)))
 
     return threeshold_img
 
@@ -260,6 +295,7 @@ Devuelve la imagen después de aplicar el algoritmo.
 - image_title(op): título de la imagen. Por defecto 'Imagen'
 """
 def m_term(haar_img, m, img_title="Imagen"):
+    # SIN ACABAR
     print("Aplicando algoritmo de m-términos a la transformada de Haar de '" + img_title + "'.")
     m_term_img = haar_img.copy()
     delete = len(haar_img)*len(haar_img[0]) - m
@@ -293,10 +329,20 @@ Devuelve el error medio.
 def error(img, back_img, img_title="Imagen"):
     print("Calculando el error medio de '" + img_title + "' y su aproximación.")
     error = 0
-    for i in range(len(img)):
-        for j in range(len(img[0])):
-            error += abs(img[i][j]-back_img[i][j])
-    return error / (len(img)*len(img[0]))
+
+    if(len(img.shape)==2):
+        for i in range(len(img)):
+            for j in range(len(img[0])):
+                error += abs(img[i][j]-back_img[i][j])
+        error = error / (len(img)*len(img[0]))
+    else:
+        for i in range(len(img)):
+            for j in range(len(img[0])):
+                for k in range(len(img[0][0])):
+                    error += abs(img[i][j][k]-back_img[i][j][k])
+        error = error / (len(img)*len(img[0])*len(img[0][0]))
+
+    return error
 
 """ Recorta una imagen a la de tamaño 2^p*2^q más grande dentro de ella.
 Devuelve la imagen recortada.
@@ -307,8 +353,6 @@ Devuelve la imagen recortada.
 def crop_img(img, sq=False, img_title="Imagen"):
     p = 2**int(math.log(len(img), 2))
     q = 2**int(math.log(len(img[0]), 2))
-    print(p)
-    print(q)
 
     if(sq):     # ajustamos p y q en caso de ser cuadrada
         if(p<q): q=p
@@ -367,6 +411,12 @@ def diff_size(file_org, file_rev):
     print("El archivo original pesa {} bytes y el greedy {} bytes."
           .format(os.stat(file_org).st_size, os.stat(file_rev).st_size))
 
+def prueba():
+    img = read_img("images/" + img_title, 1)
+    img = extend_img(img, sq=False)
+    show_img(img)
+    #save_img(img_title, img)
+
 
 #######################
 ###       MAIN      ###
@@ -375,13 +425,14 @@ def diff_size(file_org, file_rev):
 """ Programa principal. """
 def main():
     #img_title = input("Image name: ")
-    img_title = "BigBoiLion.jpg"
+    #img_title = "BigBoiLion.jpg"
     #img_title = "lena512.bmp"
     #img_title = "alham.jpg"
-    epsilon = 1.0
+    img_title = "alham_sq.png"
+    epsilon = 2.0
     m = 1000000
 
-    img = leer_imagen("images/" + img_title, 0)
+    img = read_img("images/" + img_title, 1)
 
     # Calculando la transformada de Haar
     haar_img = haar_image(img, img_title)
@@ -394,7 +445,7 @@ def main():
     #greedy_img = greedy_img.astype(np.uint8)
     #greedy_img = greedy_img.astype(np.float64)
 
-    if (True):
+    if (False):
         print("\nMatriz de la imagen original:")
         print(img)
         print("\nMatriz después de la transformada de Haar:")
@@ -410,7 +461,7 @@ def main():
     print("Error medio: {}.".format(round(err, 4)))
 
     # Mostramos diferentes imágenes
-    show_images([img, haar_img, greedy_img, rev_img],
+    show_img_list([img, haar_img, greedy_img, rev_img],
                 ["Original", "2D Haar Transform", "Greedy", "Return to Original"])
 
     save_img("images/rev_" + img_title, rev_img)
