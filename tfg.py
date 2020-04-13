@@ -195,7 +195,7 @@ def haar_image(img, img_title="Imagen"):
         haar_img = zip(*by_row)             # transponemos
         haar_img = haar_row(haar_img)       # por columnas
         haar_img = np.array(haar_img)
-        haar_img = np.transpose(haar_img) # transponemos
+        haar_img = np.transpose(haar_img)   # transponemos
     else:
         haar_img = np.zeros(img.shape)
         for k in range(3):
@@ -205,7 +205,7 @@ def haar_image(img, img_title="Imagen"):
 """ Calcula la transformada inversa de Haar. Devuelve la lista resultante.
 - front: primera parte de la lista.
 - the_rest: segunda parte de la lista.
-- power: 2 elevadoa este exponente me dice el índice de the_rest en la lista.
+- power: 2 elevado a este exponente me dice el índice de the_rest en la lista.
 """
 def reverse_haar(front, the_rest, power):
 	reverse = []
@@ -438,17 +438,41 @@ def diff_size(file_org, file_rev):
     print("El archivo original pesa {} bytes y el greedy {} bytes."
           .format(os.stat(file_org).st_size, os.stat(file_rev).st_size))
 
+def concat(img1, img2):
+    if(img1.shape[0] >= img1.shape[1]):
+        if(len(img1.shape)==3):
+            concat = np.zeros((img1.shape[0], 2*img1.shape[1], img1.shape[2]))
+        else:
+            concat = np.zeros((img1.shape[0], 2*img1.shape[1]))
+
+        for i in range(img1.shape[0]):
+            for j in range(img1.shape[1]):
+                concat[i][j] = img1[i][j]
+                concat[i][j+img1.shape[1]] = img2[i][j]
+    else:
+        if(len(img1.shape)==3):
+            concat = np.zeros((2*img1.shape[0], img1.shape[1], img1.shape[2]))
+        else:
+            concat = np.zeros((2*img1.shape[0], img1.shape[1]))
+
+        for i in range(img1.shape[0]):
+            for j in range(img1.shape[1]):
+                concat[i][j] = img1[i][j]
+                concat[i+img1.shape[1]][j] = img2[i][j]
+
+    return concat
+
 #######################
 ###       MAIN      ###
 #######################
 
 """ Programa principal. """
 def main():
-    img_title = "BigBoiLion.jpg"
     #img_title = "lena512.bmp"
+    img_title = "BigBoiLion.jpg"
+    #img_title = "alham_sq.png"
     #img_title = "alham.jpg"
     #img_title = "alham_crop.jpg"
-    #img_title = "alham_sq.png"
     epsilon = 2.0
     m = 1000000
 
@@ -464,10 +488,7 @@ def main():
     # Restaurando la imagen original
     rev_img = reverse_image(greedy_img, img_title)
 
-    #greedy_img = greedy_img.astype(np.uint8)
-    #greedy_img = greedy_img.astype(np.float64)
-
-    if (False):
+    if (True):
         print("\nMatriz de la imagen original:")
         print(img)
         print("\nMatriz después de la transformada de Haar:")
@@ -489,8 +510,12 @@ def main():
     show_img_list([img, haar_img, greedy_img, rev_img],
                 ["Original", "2D Haar Transform", "Greedy", "Return to Original"])
 
+    concat_img = concat(img, normaliza(rev_img))
+    show_img(concat_img, 0)
+
     save_img("images/rev_" + img_title, rev_img, True)
     save_img("images/greedy_" + img_title, greedy_img, False)
+    save_img("images/concat_" + img_title, concat_img, False)
 
     diff_size("images/" + img_title, "images/greedy_" + img_title)
 
