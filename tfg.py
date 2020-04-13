@@ -458,7 +458,7 @@ def concat(img1, img2):
         for i in range(img1.shape[0]):
             for j in range(img1.shape[1]):
                 concat[i][j] = img1[i][j]
-                concat[i+img1.shape[1]][j] = img2[i][j]
+                concat[i+img1.shape[0]][j] = img2[i][j]
 
     return concat
 
@@ -473,6 +473,7 @@ def main():
     #img_title = "alham_sq.png"
     #img_title = "alham.jpg"
     #img_title = "alham_crop.jpg"
+    #img_title = "al.jpg"
     epsilon = 2.0
     m = 1000000
 
@@ -484,11 +485,11 @@ def main():
     haar_img = haar_image(ext, img_title)
     # Aplicándole el algoritmo greedy
     greedy_img = threesholding(haar_img, epsilon, img_title)
-    #greedy_img = np.array(m_term(haar_img, m, img_title))
+    #greedy_img = m_term(haar_img, m, img_title)
     # Restaurando la imagen original
     rev_img = reverse_image(greedy_img, img_title)
 
-    if (True):
+    if (False):
         print("\nMatriz de la imagen original:")
         print(img)
         print("\nMatriz después de la transformada de Haar:")
@@ -510,8 +511,8 @@ def main():
     show_img_list([img, haar_img, greedy_img, rev_img],
                 ["Original", "2D Haar Transform", "Greedy", "Return to Original"])
 
-    concat_img = concat(img, normaliza(rev_img))
-    show_img(concat_img, 0)
+    concat_img = concat(img, normaliza(rev_img, img_title))
+    show_img(concat_img, 0, img_title, "Haar wavelets")
 
     save_img("images/rev_" + img_title, rev_img, True)
     save_img("images/greedy_" + img_title, greedy_img, False)
