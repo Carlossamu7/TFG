@@ -10,6 +10,33 @@ import math
 from sympy import *
 x = Symbol('x', real=True)
 
+def matrix_example(x):
+    row = np.array(haar_row(x))
+    final = np.array(np.transpose(haar_row(np.transpose(row))))
+    print(x)
+    print()
+    print(row)
+    print()
+    print(final)
+    print()
+
+def test_matrix():
+    x = np.array([[12,12,8,8],
+                  [12,12,8,8],
+                  [10,10,8,8],
+                  [10,10,8,8]])
+
+    y = np.array([[12,12,12,12,8,8,10,10],
+                  [12,12,12,12,8,8,10,10],
+                  [10,10,10,10,8,8,10,10],
+                  [10,10,10,10,8,8,10,10],
+                  [22,22,22,22,8,8,16,16],
+                  [22,22,22,22,8,8,16,16],
+                  [22,20,20,20,14,14,4,4],
+                  [22,20,20,20,14,14,4,4]])
+
+    matrix_example(x)
+
 #######################
 ###   FUNCIONES   ###
 #######################

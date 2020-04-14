@@ -150,8 +150,8 @@ def haar_transform(list):
 
 	for i in range(len(list)):
 		if (i%2 == 0):
-			avgs.append((list[i] + list[i+1]) / 2)
-			difs.append((list[i] - list[i+1]) / 2)
+			avgs.append((list[i] + list[i+1]) / math.sqrt(2))
+			difs.append((list[i] - list[i+1]) / math.sqrt(2))
 
 	return avgs + difs
 
@@ -211,8 +211,8 @@ def reverse_haar(front, the_rest, power):
 	reverse = []
 
 	for i in range(len(front)):
-		reverse.append(front[i] + the_rest[i])
-		reverse.append(front[i] - the_rest[i])
+		reverse.append((front[i] + the_rest[i]) / math.sqrt(2))
+		reverse.append((front[i] - the_rest[i]) / math.sqrt(2))
 
 	if(len(the_rest) > len(reverse) ):
 		the_rest = the_rest[2**power:]
@@ -275,7 +275,7 @@ def threesholding(haar_img, epsilon, img_title="Imagen"):
     if(len(haar_img.shape)==2):
         for i in range(len(haar_img)):
             for j in range(len(haar_img[0])):
-                if (abs(haar_img[i][j]) * norm_pixel(i,j) < epsilon):
+                if (abs(haar_img[i][j]) < epsilon):
                     threeshold_img[i][j] = 0.0
                     count += 1
 
@@ -286,7 +286,7 @@ def threesholding(haar_img, epsilon, img_title="Imagen"):
         for i in range(len(haar_img)):
             for j in range(len(haar_img[0])):
                 for k in range(len(haar_img[0][0])):
-                    if (abs(haar_img[i][j][k]) * norm_pixel(i,j) < epsilon):
+                    if (abs(haar_img[i][j][k]) < epsilon):
                         threeshold_img[i][j][k] = 0.0
                         count += 1
 
@@ -312,10 +312,10 @@ def m_term(haar_img, m, img_title="Imagen"):
         for i in range(len(haar_img)):
             for j in range(len(haar_img[0])):
                 if(m>0):
-                    list[i+j] = abs(haar_img[i][j]) * norm_pixel(i,j)
+                    list[i+j] = abs(haar_img[i][j])
                     m -= 1
                 else:
-                    val = abs(haar_img[i][j]) * norm_pixel(i,j)
+                    val = abs(haar_img[i][j])
                     if(np.amin(list) < val):
                         list[list==np.amin(list)] = val
 
@@ -326,32 +326,6 @@ def m_term(haar_img, m, img_title="Imagen"):
         m_term_img = np.zeros(haar_img.shape)
         for k in range(3):
             m_term_img[:,:,k] = m_term(haar_img[:,:,k], m, "")
-
-    return m_term_img
-
-def m_term_malo(haar_img, m, img_title="Imagen"):
-    # SIN ACABAR
-    print("Aplicando algoritmo de m-términos a la transformada de Haar de '" + img_title + "'.")
-    m_term_img = haar_img.copy()
-    delete = len(haar_img)*len(haar_img[0]) - m
-
-    while (delete>0):
-        min = 100; x_min=0; y_min=0
-
-        for i in range(len(m_term_img)):
-            for j in range(len(m_term_img[0])):
-                if abs(m_term_img[i][j]) < min:
-                    min = m_term_img[i][j]
-                    x_min = i
-                    y_min = j
-        m_term_img[x_min][y_min] = 0.0
-        if (min==100):
-            delete = 0
-        else:
-            delete -= 1
-
-    print("Número de píxeles anulados: {} ({}%)."
-        .format(delete, round(100*delete/(len(haar_img)*len(haar_img[0])), 2)))
 
     return m_term_img
 
@@ -499,6 +473,8 @@ def concat(img1, img2):
 - n: índice de la función de Haar.
 """
 def norm_hn(n):
+    if(n==1):
+        return 1.0
     # Calculamos k
     l = math.log(n,2);
     k = int(l);
@@ -520,27 +496,28 @@ def norm_pixel(row, col):
 """ Programa principal. """
 def main():
     #img_title = "lena512.bmp"
-    #img_title = "BigBoiLion.jpg"
-    img_title = "alham_sq.png"
+    img_title = "BigBoiLion.jpg"
+    #img_title = "alham_sq.png"
     #img_title = "alham.jpg"
-    #img_title = "alham_crop.jpg"
     #img_title = "al.jpg"
-    epsilon = 0.1
+    epsilon = 3.0
     m = 100000
 
-    img = read_img("images/" + img_title, 1)
+    # SI ES A COLOR CAMBIAR EL FLAG A 1.
+    img = read_img("images/" + img_title, 0)
     print("Tamaño de la imagen: {}.".format(img.shape))
-    ext = extend_img(img, False, img_title)
+    ext = extend_img(img, False, img_title) # solo la extiende si es necesario
 
     # Calculando la transformada de Haar
     haar_img = haar_image(ext, img_title)
     # Aplicándole el algoritmo greedy
-    #greedy_img = threesholding(haar_img, epsilon, img_title)
-    greedy_img = m_term(haar_img, m, img_title)
+    greedy_img = threesholding(haar_img, epsilon, img_title)
+    #greedy_img = m_term(haar_img, m, img_title)
+    #greedy_img = haar_img
     # Restaurando la imagen original
     rev_img = reverse_image(greedy_img, img_title)
 
-    if (True):
+    if (True):  # si queremos imprimir las matrices
         print("\nMatriz de la imagen original:")
         print(img)
         print("\nMatriz después de la transformada de Haar:")
@@ -555,16 +532,18 @@ def main():
     err = error(img, rev_img, img_title)
     print("Error medio: {}.".format(round(err, 4)))
 
-    if(rev_img.shape != img.shape):
+    if(rev_img.shape != img.shape): # recorta si hemos extendido
         rev_img = crop_size(rev_img, img.shape[0], img.shape[1], img_title)
 
     # Mostramos diferentes imágenes
     #show_img_list([img, haar_img, greedy_img, rev_img],
     #            ["Original", "2D Haar Transform", "Greedy", "Return to Original"])
 
+    # Concatenamos la imagen original y la recuperada para pintarla
     concat_img = concat(img, normaliza(rev_img, img_title))
     show_img(concat_img, 0, img_title, "Haar wavelets")
 
+    # Guardamos las imágenes
     save_img("images/rev_" + img_title, rev_img, True)
     save_img("images/greedy_" + img_title, greedy_img, False)
     save_img("images/concat_" + img_title, concat_img, False)
