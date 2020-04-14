@@ -266,15 +266,16 @@ Devuelve la imagen después de aplicar el threesholding.
 - image_title(op): título de la imagen. Por defecto 'Imagen'
 """
 def threesholding(haar_img, epsilon, img_title="Imagen"):
-    print("Aplicando algoritmo threesholding con epsilon={} a la transformada de Haar de '{}'."
-          .format(epsilon, img_title))
+    if(img_title != ""):
+        print("Aplicando algoritmo threesholding con epsilon={} a la transformada de Haar de '{}'."
+              .format(epsilon, img_title))
     threeshold_img = haar_img.copy()
     count = 0
 
     if(len(haar_img.shape)==2):
         for i in range(len(haar_img)):
             for j in range(len(haar_img[0])):
-                if abs(haar_img[i][j]) < epsilon:
+                if (abs(haar_img[i][j]) * norm_pixel(i,j) < epsilon):
                     threeshold_img[i][j] = 0.0
                     count += 1
 
@@ -285,7 +286,7 @@ def threesholding(haar_img, epsilon, img_title="Imagen"):
         for i in range(len(haar_img)):
             for j in range(len(haar_img[0])):
                 for k in range(len(haar_img[0][0])):
-                    if abs(haar_img[i][j][k]) < epsilon:
+                    if (abs(haar_img[i][j][k]) * norm_pixel(i,j) < epsilon):
                         threeshold_img[i][j][k] = 0.0
                         count += 1
 
@@ -301,6 +302,34 @@ Devuelve la imagen después de aplicar el algoritmo.
 - image_title(op): título de la imagen. Por defecto 'Imagen'
 """
 def m_term(haar_img, m, img_title="Imagen"):
+    if(img_title != ""):
+        print("Aplicando algoritmo de m-términos (m={}) a la transformada de Haar de '{}'."
+              .format(m, img_title))
+
+    if(len(haar_img.shape)==2):
+        list = np.zeros(m)
+
+        for i in range(len(haar_img)):
+            for j in range(len(haar_img[0])):
+                if(m>0):
+                    list[i+j] = abs(haar_img[i][j]) * norm_pixel(i,j)
+                    m -= 1
+                else:
+                    val = abs(haar_img[i][j]) * norm_pixel(i,j)
+                    if(np.amin(list) < val):
+                        list[list==np.amin(list)] = val
+
+        m_term_img = threesholding(haar_img, np.amin(list), "")
+
+
+    else:
+        m_term_img = np.zeros(haar_img.shape)
+        for k in range(3):
+            m_term_img[:,:,k] = m_term(haar_img[:,:,k], m, "")
+
+    return m_term_img
+
+def m_term_malo(haar_img, m, img_title="Imagen"):
     # SIN ACABAR
     print("Aplicando algoritmo de m-términos a la transformada de Haar de '" + img_title + "'.")
     m_term_img = haar_img.copy()
@@ -438,6 +467,10 @@ def diff_size(file_org, file_rev):
     print("El archivo original pesa {} bytes y el greedy {} bytes."
           .format(os.stat(file_org).st_size, os.stat(file_rev).st_size))
 
+""" Concatena dos imágenes de la manera más adecuada. Devuelve la imagen resultante.
+- img1: imagen 1 a concatenar.
+- img2: imagen 2 a concatenar.
+"""
 def concat(img1, img2):
     if(img1.shape[0] >= img1.shape[1]):
         if(len(img1.shape)==3):
@@ -462,6 +495,24 @@ def concat(img1, img2):
 
     return concat
 
+""" Calcula la norma de la función de Haar hn. Devuelve su norma.
+- n: índice de la función de Haar.
+"""
+def norm_hn(n):
+    # Calculamos k
+    l = math.log(n,2);
+    k = int(l);
+    if l - k == 0:
+        k = k-1
+    return 1/math.sqrt(2**k)
+
+""" Calcula la norma de la función de Haar en un píxel. Devuelve su norma.
+- row: fila del píxel.
+- col: columna del píxel.
+"""
+def norm_pixel(row, col):
+    return norm_hn(row+1) * norm_hn(col+1)
+
 #######################
 ###       MAIN      ###
 #######################
@@ -469,27 +520,27 @@ def concat(img1, img2):
 """ Programa principal. """
 def main():
     #img_title = "lena512.bmp"
-    img_title = "BigBoiLion.jpg"
-    #img_title = "alham_sq.png"
+    #img_title = "BigBoiLion.jpg"
+    img_title = "alham_sq.png"
     #img_title = "alham.jpg"
     #img_title = "alham_crop.jpg"
     #img_title = "al.jpg"
-    epsilon = 2.0
-    m = 1000000
+    epsilon = 0.1
+    m = 100000
 
-    img = read_img("images/" + img_title, 0)
+    img = read_img("images/" + img_title, 1)
     print("Tamaño de la imagen: {}.".format(img.shape))
     ext = extend_img(img, False, img_title)
 
     # Calculando la transformada de Haar
     haar_img = haar_image(ext, img_title)
     # Aplicándole el algoritmo greedy
-    greedy_img = threesholding(haar_img, epsilon, img_title)
-    #greedy_img = m_term(haar_img, m, img_title)
+    #greedy_img = threesholding(haar_img, epsilon, img_title)
+    greedy_img = m_term(haar_img, m, img_title)
     # Restaurando la imagen original
     rev_img = reverse_image(greedy_img, img_title)
 
-    if (False):
+    if (True):
         print("\nMatriz de la imagen original:")
         print(img)
         print("\nMatriz después de la transformada de Haar:")
@@ -508,8 +559,8 @@ def main():
         rev_img = crop_size(rev_img, img.shape[0], img.shape[1], img_title)
 
     # Mostramos diferentes imágenes
-    show_img_list([img, haar_img, greedy_img, rev_img],
-                ["Original", "2D Haar Transform", "Greedy", "Return to Original"])
+    #show_img_list([img, haar_img, greedy_img, rev_img],
+    #            ["Original", "2D Haar Transform", "Greedy", "Return to Original"])
 
     concat_img = concat(img, normaliza(rev_img, img_title))
     show_img(concat_img, 0, img_title, "Haar wavelets")
