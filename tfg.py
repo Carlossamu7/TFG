@@ -157,6 +157,7 @@ def haar_transform(list):
 
 """ Realiza el algoritmo Haar Wavelet de manera recursiva realizando las particiones
 adecuadas y usando la función 'haar_transform'. Devuelve una lista con la compresión.
+Devuelve los coeficientes de Haar de una fila.
 - list: lista a la que hacer el split de haar.
 - offset: parte fija del split.
 """
@@ -173,16 +174,18 @@ def haar_split(list, offset):
 		return list + offset
 
 """ Calcula la transformada de Haar por filas de una imágen.
+Devuelve los coeficientes de Haar después de aplicar el proceso por filas.
 - img: imagen original a transformar.
 """
 def haar_row(img):
-	haar_row = []
+	row = []
 	for pixels in img:
 		haar = haar_transform(pixels)
-		haar_row.append(haar_split(haar, []))
-	return haar_row
+		row.append(haar_split(haar, []))
+	return row
 
 """ Calcula la transformada de Haar una imágen.
+Devuelve la imagen de los coeficientes de Haar.
 - img: imagen original a transformar.
 - image_title(op): título de la imagen. Por defecto 'Imagen'.
 """
@@ -200,6 +203,7 @@ def haar_image(img, img_title="Imagen"):
         haar_img = np.zeros(img.shape)
         for k in range(3):
             haar_img[:,:,k] = haar_image(img[:,:,k], "")
+
     return haar_img
 
 """ Calcula la transformada inversa de Haar. Devuelve la lista resultante.
@@ -221,6 +225,17 @@ def reverse_haar(front, the_rest, power):
 	else:
 		return reverse
 
+""" Dada una transformada de Haar de una imagen calcula su inversa por filas.
+Devuelve la inversa por filas.
+- haar_img: imagen después de la transformada de Haar.
+- image_title(op): título de la imagen. Por defecto 'Imagen'.
+"""
+def reverse_row(haar_img, img_title="Imagen"):
+    rev_row = []
+    for pixels in haar_img:
+        rev_row.append(reverse_haar(pixels[:1], pixels[1:], 0))
+    return rev_row
+
 """ Dada una transformada de Haar de una imagen calcula su inversa.
 Devuelve la imagen original.
 - haar_img: imagen después de la transformada de Haar.
@@ -231,27 +246,14 @@ def reverse_image(haar_img, img_title="Imagen"):
         print("Restaurando la imagen original de la transformada de Haar de '" + img_title + "'.")
 
     if(len(haar_img.shape)==2):
-        rev_columns = []
-        power = 0
-
-        # Inversa por columnas
-        for pixels in haar_img:
-            rev_columns.append(reverse_haar(pixels[:1], pixels[1:], power))
-
-        rev_columns = zip(*rev_columns)
-        rev_haar = []
-
-        # Inversa por filas
-        for pixels in rev_columns:
-            rev_haar.append(reverse_haar(pixels[:1], pixels[1:], power))
-
+        by_row = reverse_row(haar_img)      # por filas
+        rev_haar = zip(*by_row)             # transponemos
+        rev_haar = reverse_row(rev_haar)    # por columnas
         rev_haar = np.array(rev_haar)
-        rev_haar = np.transpose(rev_haar)
+        rev_haar = np.transpose(rev_haar)   # tranponemos
 
-        #rev_haar = normaliza(np.array(rev_haar))
         #rev_haar = rev_haar.astype(np.uint8)
         #rev_haar = rev_haar.astype(np.float64)
-
     else:
         rev_haar = np.zeros(haar_img.shape)
         for k in range(3):
@@ -495,8 +497,9 @@ def norm_pixel(row, col):
 
 """ Programa principal. """
 def main():
-    #img_title = "lena512.bmp"
-    img_title = "BigBoiLion.jpg"
+    img_title = "lena512.bmp"
+    #img_title = "BigBoiLion.jpg"
+    #img_title = "lena_color.jpg"
     #img_title = "alham_sq.png"
     #img_title = "alham.jpg"
     #img_title = "al.jpg"
@@ -511,9 +514,9 @@ def main():
     # Calculando la transformada de Haar
     haar_img = haar_image(ext, img_title)
     # Aplicándole el algoritmo greedy
-    greedy_img = threesholding(haar_img, epsilon, img_title)
+    #greedy_img = threesholding(haar_img, epsilon, img_title)
     #greedy_img = m_term(haar_img, m, img_title)
-    #greedy_img = haar_img
+    greedy_img = haar_img
     # Restaurando la imagen original
     rev_img = reverse_image(greedy_img, img_title)
 
