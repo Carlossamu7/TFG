@@ -253,31 +253,37 @@ Devuelve la imagen después de aplicar el threesholding.
 """
 def threesholding(haar_img, epsilon, img_title="Imagen"):
     if(img_title != ""):
-        print("Aplicando algoritmo threesholding con epsilon={} a la transformada de Haar de '{}'."
+        print("Aplicando threesholding con epsilon={} a la transformada de Haar de '{}'."
               .format(epsilon, img_title))
     threeshold_img = haar_img.copy()
     count = 0
+    not_zero = 0
 
     if(len(haar_img.shape)==2):
         for i in range(len(haar_img)):
             for j in range(len(haar_img[0])):
                 if (abs(haar_img[i][j]) < epsilon):
+                    if(haar_img[i][j]==0.0):
+                        not_zero += 1
                     threeshold_img[i][j] = 0.0
                     count += 1
 
-        print("Número de píxeles anulados: {} ({}%)."
-            .format(count, round(100*count/(len(haar_img)*len(haar_img[0])), 2)))
+        total = len(haar_img)*len(haar_img[0])
 
     else:
         for i in range(len(haar_img)):
             for j in range(len(haar_img[0])):
                 for k in range(len(haar_img[0][0])):
                     if (abs(haar_img[i][j][k]) < epsilon):
+                        if(haar_img[i][j][k]==0.0):
+                            not_zero += 1
                         threeshold_img[i][j][k] = 0.0
                         count += 1
 
-        print("Número de píxeles anulados: {} ({}%)."
-            .format(count, round(100*count/(len(haar_img)*len(haar_img[0])*len(haar_img[0][0])), 2)))
+        total = len(haar_img)*len(haar_img[0])*len(haar_img[0][0])
+
+    print("Número de píxeles anulados: {} ({}%).".format(count, round(100*count/total, 2)))
+    print("Ratio de dispersión: {}.".format(round(not_zero/(total-count), 4)))
 
     return threeshold_img
 
@@ -322,22 +328,22 @@ Devuelve el error medio.
 - image_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def error(img, back_img, img_title="Imagen"):
-    print("Calculando el error medio de '" + img_title + "' y su aproximación.")
-    error = 0
+    err = 0
 
     if(len(img.shape)==2):
         for i in range(len(img)):
             for j in range(len(img[0])):
-                error += abs(img[i][j]-back_img[i][j])
-        error = error / (len(img)*len(img[0]))
+                err += abs(img[i][j]-back_img[i][j])
+        err = err / (len(img)*len(img[0]))
     else:
         for i in range(len(img)):
             for j in range(len(img[0])):
                 for k in range(len(img[0][0])):
-                    error += abs(img[i][j][k]-back_img[i][j][k])
-        error = error / (len(img)*len(img[0])*len(img[0][0]))
+                    err += abs(img[i][j][k]-back_img[i][j][k])
+        err = err / (len(img)*len(img[0])*len(img[0][0]))
 
-    return error
+    print("Error medio de '{}' y su aproximación: {}.".format(img_title, round(err, 4)))
+    return err
 
 """ Recorta una imagen a la de tamaño 2^p*2^q más grande dentro de ella.
 Devuelve la imagen recortada.
@@ -481,26 +487,25 @@ def norm_pixel(row, col):
 
 """ Programa principal. """
 def main():
-    img_title = "lena.png"
-    #img_title = "lion.jpg"
-    #img_title = "lena_color.jpg"
-    #img_title = "alham_sq.png"
-    #img_title = "alham.jpg"
-    #img_title = "al.jpg"
+    #img_title = "lena.png"
+    #img_title = "lion.png"
+    img_title = "lena_color.png"
+    #img_title = "alham.png"
+    #img_title = "al.png"
     epsilon = 3.0
     m = 100000
 
     # SI ES A COLOR CAMBIAR EL FLAG A 1.
-    img = read_img("images/" + img_title, 0)
+    img = read_img("images/" + img_title, 1)
     print("Tamaño de la imagen: {}.".format(img.shape))
     ext = extend_img(img, False, img_title) # solo la extiende si es necesario
 
     # Calculando la transformada de Haar
     haar_img = haar_image(ext, img_title)
     # Aplicándole el algoritmo greedy
-    #greedy_img = threesholding(haar_img, epsilon, img_title)
+    greedy_img = threesholding(haar_img, epsilon, img_title)
     #greedy_img = m_term(haar_img, m, img_title)
-    greedy_img = haar_img
+    #greedy_img = haar_img
     # Restaurando la imagen original
     rev_img = reverse_image(greedy_img, img_title)
 
@@ -515,12 +520,11 @@ def main():
         print(rev_img)
         print()
 
-    # Calulamos el error medio de la imagen original y la greedy
-    err = error(img, rev_img, img_title)
-    print("Error medio: {}.".format(round(err, 4)))
-
     if(rev_img.shape != img.shape): # recorta si hemos extendido
         rev_img = crop_size(rev_img, img.shape[0], img.shape[1], img_title)
+
+    # Calulamos el error medio de la imagen original y la revertida
+    error(img, rev_img, img_title)
 
     # Mostramos diferentes imágenes
     #show_img_list([img, haar_img, greedy_img, rev_img],
