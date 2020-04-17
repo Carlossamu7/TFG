@@ -141,37 +141,22 @@ def save_img(file_name, img, normalize=False):
 ###   FUNCIONES   ###
 #######################
 
-""" Calcula la transformada de Haar de una lista. Devuelve la transformada.
-- list: lista sobre la que realizar el cálculo.
-"""
-def haar_transform(list):
-	avgs = []
-	difs = []
-
-	for i in range(len(list)):
-		if (i%2 == 0):
-			avgs.append((list[i] + list[i+1]) / math.sqrt(2))
-			difs.append((list[i] - list[i+1]) / math.sqrt(2))
-
-	return avgs + difs
-
 """ Realiza el algoritmo Haar Wavelet de manera recursiva realizando las particiones
-adecuadas y usando la función 'haar_transform'. Devuelve una lista con la compresión.
-Devuelve los coeficientes de Haar de una fila.
+adecuadas y calculando sus medias y diferencias. Devuelve una lista con los coeficientes.
 - list: lista a la que hacer el split de haar.
 - offset: parte fija del split.
 """
-def haar_split(list, offset):
-	if(len(list) > 2):
-		first = list[:len(list)//2]
-		second = list[len(list)//2:]
+def haar_transform(list, offset):
+    if(len(list) >= 2):
+        avgs = []
+        difs = []
+        for i in range(0, len(list), 2):
+            avgs.append((list[i] + list[i+1]) / math.sqrt(2))
+            difs.append((list[i] - list[i+1]) / math.sqrt(2))
+        return haar_transform(avgs, difs + offset)
 
-		first = haar_transform(first)
-		offset = second + offset
-		return haar_split(first, offset)
-
-	else:
-		return list + offset
+    else:
+        return list + offset
 
 """ Calcula la transformada de Haar por filas de una imágen.
 Devuelve los coeficientes de Haar después de aplicar el proceso por filas.
@@ -180,8 +165,7 @@ Devuelve los coeficientes de Haar después de aplicar el proceso por filas.
 def haar_row(img):
 	row = []
 	for pixels in img:
-		haar = haar_transform(pixels)
-		row.append(haar_split(haar, []))
+		row.append(haar_transform(pixels, []))
 	return row
 
 """ Calcula la transformada de Haar una imágen.
@@ -231,10 +215,10 @@ Devuelve la inversa por filas.
 - image_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def reverse_row(haar_img, img_title="Imagen"):
-    rev_row = []
+    row = []
     for pixels in haar_img:
-        rev_row.append(reverse_haar(pixels[:1], pixels[1:], 0))
-    return rev_row
+        row.append(reverse_haar(pixels[:1], pixels[1:], 0))
+    return row
 
 """ Dada una transformada de Haar de una imagen calcula su inversa.
 Devuelve la imagen original.
@@ -498,7 +482,7 @@ def norm_pixel(row, col):
 """ Programa principal. """
 def main():
     img_title = "lena512.bmp"
-    #img_title = "BigBoiLion.jpg"
+    #img_title = "lion.jpg"
     #img_title = "lena_color.jpg"
     #img_title = "alham_sq.png"
     #img_title = "alham.jpg"
