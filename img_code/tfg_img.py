@@ -282,10 +282,14 @@ def threesholding(haar_img, epsilon, img_title="Imagen"):
 
         total = len(haar_img)*len(haar_img[0])*len(haar_img[0][0])
 
-    print("Número de píxeles anulados: {} ({}%).".format(count, round(100*count/total, 2)))
-    print("Ratio de dispersión: {}.".format(round(not_zero/(total-count), 4)))
+    perc = round(100*count/total, 2)
+    ratio = round(not_zero/(total-count), 4)
 
-    return threeshold_img
+    if(img_title != ""):
+        print("Número de píxeles anulados: {} ({}%).".format(count, perc))
+        print("Ratio de dispersión: {}.".format(ratio))
+
+    return threeshold_img, perc, ratio
 
 """ Se queda con la mejor aproximación de m-términos.
 Devuelve la imagen después de aplicar el algoritmo.
@@ -311,15 +315,23 @@ def m_term(haar_img, m, img_title="Imagen"):
                     if(np.amin(list) < val):
                         list[list==np.amin(list)] = val
 
-        m_term_img = threesholding(haar_img, np.amin(list), "")
+        m_term_img, perc, ratio = threesholding(haar_img, np.amin(list), "")
 
 
     else:
         m_term_img = np.zeros(haar_img.shape)
+        perc = 0
+        ratio = 0
         for k in range(3):
-            m_term_img[:,:,k] = m_term(haar_img[:,:,k], m, "")
+            m_term_img[:,:,k], per, rat = m_term(haar_img[:,:,k], m, "")
+            perc += per
+            ratio += rat
 
-    return m_term_img
+    if(img_title != ""):
+        print("Porcentaje de píxeles descartados: {}%.".format(perc))
+        print("Ratio de dispersión: {}.".format(ratio))
+
+    return m_term_img, perc, ratio
 
 """ Calcula el error medio de la imagen original y su aproximación.
 Devuelve el error medio.
@@ -342,7 +354,9 @@ def error(img, back_img, img_title="Imagen"):
                     err += abs(img[i][j][k]-back_img[i][j][k])
         err = err / (len(img)*len(img[0])*len(img[0][0]))
 
-    print("Error medio de '{}' y su aproximación: {}.".format(img_title, round(err, 4)))
+    err = round(err, 4)
+    if(img_title != ""):
+        print("Error medio de '{}' y su aproximación: {}.".format(img_title, err))
     return err
 
 """ Recorta una imagen a la de tamaño 2^p*2^q más grande dentro de ella.
@@ -359,10 +373,11 @@ def crop_img(img, sq=False, img_title="Imagen"):
         if(p<q): q=p
         else: p=q
 
-    if(len(img.shape)==3):
-        print("Recortando imagen '{}' a tamaño ({}, {}, 3).".format(img_title, p, q))
-    else:
-        print("Recortando imagen '{}' a tamaño ({}, {}).".format(img_title, p, q))
+    if(img_title != ""):
+        if(len(img.shape)==3):
+            print("Recortando imagen '{}' a tamaño ({}, {}, 3).".format(img_title, p, q))
+        else:
+            print("Recortando imagen '{}' a tamaño ({}, {}).".format(img_title, p, q))
 
     a = int((len(img)-p)/2)
     b = int((len(img[0])-q)/2)
@@ -400,10 +415,12 @@ def extend_img(img, sq=False, img_title="Imagen"):
             else: p=q
 
         if(len(img.shape)==3):
-            print("Extendiendo imagen '{}' a tamaño ({}, {}, 3).".format(img_title, p, q))
+            if(img_title != ""):
+                print("Extendiendo imagen '{}' a tamaño ({}, {}, 3).".format(img_title, p, q))
             ext = np.zeros((p, q, 3), dtype=np.float64)
         else:
-            print("Extendiendo imagen '{}' a tamaño ({}, {}).".format(img_title, p, q))
+            if(img_title != ""):
+                print("Extendiendo imagen '{}' a tamaño ({}, {}).".format(img_title, p, q))
             ext = np.zeros((p, q), dtype=np.float64)
 
         for i in range(len(img)):
@@ -422,7 +439,11 @@ Devuelve la imagen recortada.
 - image_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def crop_size(img, rows, cols, img_title="Imagen"):
-    print("Recortando imagen '{}' a tamaño {}.".format(img_title, img.shape))
+    if(img_title != ""):
+        if(len(img.shape)==2):
+            print("Recortando imagen '{}' a tamaño ({}, {}).".format(img_title, rows, cols))
+        else:
+            print("Recortando imagen '{}' a tamaño ({}, {}, {}).".format(img_title, rows, cols, 3))
     return img[:rows, :cols]
 
 """ Imprime por pantalla el tamaño en bytes de los archivos.
@@ -481,6 +502,15 @@ def norm_hn(n):
 def norm_pixel(row, col):
     return norm_hn(row+1) * norm_hn(col+1)
 
+""" Experimento greedy a realizar.
+- img_title: título de la imagen.
+- flag: 0 para B/N y 1 color.
+- fun: función de aproximación (threesholding, m_term).
+- param: parámetro de la función de aproximación.
+- print_mat (op): indica si se deben imprimir las matrices. Por defecto 'False'.
+- show_im (op): indica si mostrar las imágenes. Por defeto 'True'.
+- save_im (op): indica si guardar las imágenes. Por defecto 'True'.
+"""
 def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, save_im = True):
     img = read_img("images/" + img_title, flag)
     print("Tamaño de la imagen: {}.".format(img.shape))
@@ -489,7 +519,7 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
     # Calculando la transformada de Haar
     haar_img = haar_image(ext, img_title)
     # Aplicándole el algoritmo greedy
-    greedy_img = fun(haar_img, param, img_title)
+    greedy_img, perc, ratio = fun(haar_img, param, img_title)
     # Restaurando la imagen original
     rev_img = reverse_image(greedy_img, img_title)
 
@@ -508,7 +538,7 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
         print()
 
     # Calulamos el error medio de la imagen original y la revertida
-    error(img, rev_img, img_title)
+    err = error(img, rev_img, img_title)
 
     # Mostramos diferentes imágenes
     #show_img_list([img, haar_img, greedy_img, rev_img],
@@ -522,9 +552,72 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
     if(save_im):    # Guardamos las imágenes
         save_img("images/rev" + str(param) + "_" + img_title, rev_img, True)
         save_img("images/greedy" + str(param) + "_" + img_title, greedy_img, False)
-        save_img("images/concat" + str(param) + "_" + img_title, concat_img, False)
+        #save_img("images/concat" + str(param) + "_" + img_title, concat_img, False)
+        diff_size("images/" + img_title, "images/greedy_" + img_title)
 
-    diff_size("images/" + img_title, "images/greedy_" + img_title)
+    return err, perc, ratio
+
+def optimization(img_title, flag):
+    thrs = []; errs = []; pers = []; rats = []
+
+    for thr in range(0,40,2):
+        err, per, rat = experiment(img_title, flag, threesholding, thr, False, False, False, False)
+        thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
+
+    print(thrs); print(errs); print(pers); print(rats)
+
+    plt.scatter(pers, err)
+    plt.title("Relación umbral-error")
+    plt.gcf().canvas.set_window_title('TFG')
+    plt.show()
+
+""" Experimento greedy a realizar.
+- img: imagen inicial sobre la que realizar el experimento.
+- thr: parámetro de la función de aproximación.
+"""
+def experiment2(img, thr):
+    ext = extend_img(img, False, "") # solo la extiende si es necesario
+
+    # Calculando la transformada de Haar
+    haar_img = haar_image(ext, "")
+    # Aplicándole el algoritmo greedy
+    greedy_img, perc, ratio = threesholding(haar_img, thr, "")
+    # Restaurando la imagen original
+    rev_img = reverse_image(greedy_img, "")
+
+    if(rev_img.shape != img.shape): # recorta si hemos extendido
+        rev_img = crop_size(rev_img, img.shape[0], img.shape[1], "")
+
+    # Calulamos el error medio de la imagen original y la revertida
+    err = error(img, rev_img, "")
+    return err, perc, ratio
+
+""" Optimización del error medio.
+- img_title: título de la imagen.
+- flag: 0 para B/N y 1 color.
+"""
+def optimization(img_title, flag):
+    img = read_img("images/" + img_title, flag)
+    print("Tamaño de la imagen: {}.".format(img.shape))
+    thrs = []; errs = []; pers = []; rats = []
+
+    for thr in range(0,40,2):
+        err, per, rat = experiment2(img, thr)
+        thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
+
+    print("Umbrales:")
+    print(thrs)
+    print("Errores:")
+    print(errs)
+    print("Porcentajes de descarte:")
+    print(pers)
+    print("Ratios de dispersión:")
+    print(rats)
+
+    plt.scatter(pers, errs)
+    plt.title("Relación porcentaje de descarte - error")
+    plt.gcf().canvas.set_window_title('TFG')
+    plt.show()
 
 #######################
 ###       MAIN      ###
@@ -532,10 +625,26 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
 
 """ Programa principal. """
 def main():
-    experiment("lena.png", 0, threesholding, 3.0)
-    #experiment("lion.png", 0, threesholding, 3.0)
-    #experiment("lena_color.png", 1, threesholding, 3.0)
-    #experiment("alham.png", 1, threesholding, 3.0)
+    #experiment("lena.png", 0, threesholding, 40.0)
+    #experiment("lion.png", 0, threesholding, 50.0)
+    #experiment("lena_color.png", 1, threesholding, 50.0)
+    #experiment("alham.png", 1, threesholding, 40.0)
+
+    optimization("lena.png",0)
+
+    """
+    img = read_img("images/" + "greedy_lion.png", 0)
+    img = img[1024:, 1024:]
+
+    max = np.amax(img)
+    min = np.amin(img)
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            img[i][j] = (img[i][j]-min)/(max-min) * 255
+
+    save_img("images/dxdy.png", img, True)
+    """
+
 
 if __name__ == "__main__":
 	main()
