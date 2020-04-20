@@ -9,6 +9,7 @@ import numpy as np
 import math
 import cv2
 import os
+from kneed import KneeLocator
 
 ###########################################
 ###   LECTURA E IMPRESIÓN DE IMÁGENES   ###
@@ -592,7 +593,7 @@ def experiment2(img, thr):
     err = error(img, rev_img, "")
     return err, perc, ratio
 
-""" Optimización del error medio.
+""" Optimización del error medio. Devuelve el punto 'knee'.
 - img_title: título de la imagen.
 - flag: 0 para B/N y 1 color.
 """
@@ -614,10 +615,32 @@ def optimization(img_title, flag):
     print("Ratios de dispersión:")
     print(rats)
 
+    kneedle = KneeLocator(pers, errs, S=1.0, curve='convex', direction='increasing')
+    print("El punto 'knee' es: {}".format(round(kneedle.knee, 2)))
+    for i in range(len(pers)):
+        if (pers[i] == kneedle.knee):
+            opt_thr = thrs[i]
+    print("El umbral asociado es: {}".format(opt_thr))
+
+    plt.plot(pers, errs, '-', linewidth=1)
     plt.scatter(pers, errs)
-    plt.title("Relación porcentaje de descarte - error")
+    plt.vlines(kneedle.knee, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Punto 'knee'")
+    plt.title("Relación porcentaje de descarte - error para '{}'".format(img_title))
+    plt.legend()
     plt.gcf().canvas.set_window_title('TFG')
+    plt.savefig("images/graf_pers_" + img_title)
     plt.show()
+
+    plt.plot(thrs, errs, '-', linewidth=1)
+    plt.scatter(thrs, errs)
+    plt.vlines(opt_thr, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Umbral del punto 'knee'")
+    plt.title("Relación umbral - error para '{}'".format(img_title))
+    plt.legend(loc="lower right")
+    plt.gcf().canvas.set_window_title('TFG')
+    plt.savefig("images/graf_thrs_" + img_title)
+    plt.show()
+
+    return opt_thr, kneedle.knee
 
 #######################
 ###       MAIN      ###
@@ -630,7 +653,9 @@ def main():
     #experiment("lena_color.png", 1, threesholding, 50.0)
     #experiment("alham.png", 1, threesholding, 40.0)
 
-    optimization("lena.png",0)
+    optimization("lena.png", 0)
+    #optimization("lion.png", 0)
+    #optimization("alham.png", 1)
 
     """
     img = read_img("images/" + "greedy_lion.png", 0)
