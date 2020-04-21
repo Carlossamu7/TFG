@@ -558,25 +558,11 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
 
     return err, perc, ratio
 
-def optimization(img_title, flag):
-    thrs = []; errs = []; pers = []; rats = []
-
-    for thr in range(0,40,2):
-        err, per, rat = experiment(img_title, flag, threesholding, thr, False, False, False, False)
-        thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
-
-    print(thrs); print(errs); print(pers); print(rats)
-
-    plt.scatter(pers, err)
-    plt.title("Relación umbral-error")
-    plt.gcf().canvas.set_window_title('TFG')
-    plt.show()
-
 """ Experimento greedy a realizar.
 - img: imagen inicial sobre la que realizar el experimento.
 - thr: parámetro de la función de aproximación.
 """
-def experiment2(img, thr):
+def experiment_opt(img, thr):
     ext = extend_img(img, False, "") # solo la extiende si es necesario
 
     # Calculando la transformada de Haar
@@ -603,9 +589,10 @@ def optimization(img_title, flag):
     thrs = []; errs = []; pers = []; rats = []
 
     for thr in range(0,40,2):
-        err, per, rat = experiment2(img, thr)
+        err, per, rat = experiment_opt(img, thr)
         thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
 
+    # Imprimo las listas
     print("Umbrales:")
     print(thrs)
     print("Errores:")
@@ -615,27 +602,33 @@ def optimization(img_title, flag):
     print("Ratios de dispersión:")
     print(rats)
 
+    # Calculo el 'knee'
     kneedle = KneeLocator(pers, errs, S=1.0, curve='convex', direction='increasing')
     print("El punto 'knee' es: {}".format(round(kneedle.knee, 2)))
+
+    # Busco el umbral asociado a ese 'knee'
     for i in range(len(pers)):
         if (pers[i] == kneedle.knee):
             opt_thr = thrs[i]
     print("El umbral asociado es: {}".format(opt_thr))
 
-    plt.plot(pers, errs, '-', linewidth=1)
-    plt.scatter(pers, errs)
+    # Imprimo las gráficas
+    plt.plot(pers, errs, '-o', linewidth=1)
     plt.vlines(kneedle.knee, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Punto 'knee'")
-    plt.title("Relación porcentaje de descarte - error para '{}'".format(img_title))
+    plt.xlabel("Porcentaje de descartados")
+    plt.ylabel("Error medio")
     plt.legend()
+    plt.title("Relación porcentaje de descarte - error para '{}'".format(img_title))
     plt.gcf().canvas.set_window_title('TFG')
     plt.savefig("images/graf_pers_" + img_title)
     plt.show()
 
-    plt.plot(thrs, errs, '-', linewidth=1)
-    plt.scatter(thrs, errs)
+    plt.plot(thrs, errs, '-o', linewidth=1)
     plt.vlines(opt_thr, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Umbral del punto 'knee'")
-    plt.title("Relación umbral - error para '{}'".format(img_title))
+    plt.xlabel("Umbral")
+    plt.ylabel("Error medio")
     plt.legend(loc="lower right")
+    plt.title("Relación umbral - error para '{}'".format(img_title))
     plt.gcf().canvas.set_window_title('TFG')
     plt.savefig("images/graf_thrs_" + img_title)
     plt.show()
@@ -653,9 +646,8 @@ def main():
     #experiment("lena_color.png", 1, threesholding, 50.0)
     #experiment("alham.png", 1, threesholding, 40.0)
 
-    optimization("lena.png", 0)
-    #optimization("lion.png", 0)
-    #optimization("alham.png", 1)
+    #optimization("lena.png", 0)
+    optimization("alham.png", 1)
 
     """
     img = read_img("images/" + "greedy_lion.png", 0)
@@ -669,7 +661,6 @@ def main():
 
     save_img("images/dxdy.png", img, True)
     """
-
 
 if __name__ == "__main__":
 	main()
