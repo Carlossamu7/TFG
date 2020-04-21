@@ -558,6 +558,31 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
 
     return err, perc, ratio
 
+""" Obtenemos el gradiente de la imagen
+- img_title: título de la imagen.
+- flag: 0 para B/N y 1 color.
+"""
+def getDerivates(img_title, flag):
+    img = read_img("images/" + img_title, flag)
+    print("Tamaño de la imagen: {}.".format(img.shape))
+    ext = extend_img(img, False, img_title) # solo la extiende si es necesario
+
+    # Calculando la transformada de Haar
+    haar_img = haar_image(ext, img_title)
+
+    der = haar_img[len(img)//2:, len(img[0])//2:]
+
+    max = np.amax(der)
+    min = np.amin(der)
+    for i in range(der.shape[0]):
+        for j in range(der.shape[1]):
+            der[i][j] = (der[i][j]-min)/(max-min) * 255
+
+    show_img(der, 0, img_title, "Derivadas")
+    save_img("images/der_" + img_title, der)
+
+    return der
+
 """ Experimento greedy a realizar.
 - img: imagen inicial sobre la que realizar el experimento.
 - thr: parámetro de la función de aproximación.
@@ -641,26 +666,15 @@ def optimization(img_title, flag):
 
 """ Programa principal. """
 def main():
-    #experiment("lena.png", 0, threesholding, 40.0)
+    experiment("lena.png", 0, threesholding, 40.0)
     #experiment("lion.png", 0, threesholding, 50.0)
     #experiment("lena_color.png", 1, threesholding, 50.0)
     #experiment("alham.png", 1, threesholding, 40.0)
 
+    getDerivates("lena.png", 0)
+
     #optimization("lena.png", 0)
-    optimization("alham.png", 1)
-
-    """
-    img = read_img("images/" + "greedy_lion.png", 0)
-    img = img[1024:, 1024:]
-
-    max = np.amax(img)
-    min = np.amin(img)
-    for i in range(img.shape[0]):
-        for j in range(img.shape[1]):
-            img[i][j] = (img[i][j]-min)/(max-min) * 255
-
-    save_img("images/dxdy.png", img, True)
-    """
+    #optimization("alham.png", 1)
 
 if __name__ == "__main__":
 	main()
