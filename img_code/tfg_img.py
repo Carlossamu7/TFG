@@ -138,9 +138,9 @@ def save_img(file_name, img, normalize=False):
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
     cv2.imwrite(file_name, im)
 
-#######################
-###   FUNCIONES   ###
-#######################
+##########################
+###   HAAR TRANSFORM   ###
+##########################
 
 """ Realiza el algoritmo Haar Wavelet de manera recursiva realizando las particiones
 adecuadas y calculando sus medias y diferencias. Devuelve una lista con los coeficientes.
@@ -451,9 +451,17 @@ def crop_size(img, rows, cols, img_title="Imagen"):
 - file_org: archivo original.
 - file_rev: arhivo greedy.
 """
-def diff_size(file_org, file_rev):
+def diff_size_file(file_org, file_rev):
     print("El archivo original pesa {} bytes y el greedy {} bytes."
           .format(os.stat(file_org).st_size, os.stat(file_rev).st_size))
+
+""" Imprime por pantalla el tamaño en bytes de los archivos.
+- file_org: archivo original.
+- file_rev: arhivo greedy.
+"""
+def diff_size(img, comp_img):
+    print("El archivo original pesa {} bytes y la compresión del greedy {} bytes."
+          .format(img.nbytes, np.array(comp_img).nbytes))
 
 """ Concatena dos imágenes de la manera más adecuada. Devuelve la imagen resultante.
 - img1: imagen 1 a concatenar.
@@ -503,7 +511,7 @@ def norm_hn(n):
 def norm_pixel(row, col):
     return norm_hn(row+1) * norm_hn(col+1)
 
-""" Experimento greedy a realizar.
+""" Experimento greedy a realizar. Devuelve la compresión.
 - img_title: título de la imagen.
 - flag: 0 para B/N y 1 color.
 - fun: función de aproximación (threesholding, m_term).
@@ -521,8 +529,19 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
     haar_img = haar_image(ext, img_title)
     # Aplicándole el algoritmo greedy
     greedy_img, perc, ratio = fun(haar_img, param, img_title)
+    # Comprimimos
+    comp, cent = compress_img(greedy_img, img_title)
+
+    """
+    AQUÍ REALIZARÍAMOS EL ENVÍO DE 'comp'
+    """
+
+    # Descomprimimos
+    uncomp = uncompress_img(comp, cent, img_title)
+    print(greedy_img)
+    print(uncomp)
     # Restaurando la imagen original
-    rev_img = reverse_image(greedy_img, img_title)
+    rev_img = reverse_image(uncomp, img_title)
 
     if(rev_img.shape != img.shape): # recorta si hemos extendido
         rev_img = crop_size(rev_img, img.shape[0], img.shape[1], img_title)
@@ -548,15 +567,16 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
     # Concatenamos la imagen original y la recuperada para pintarla
     concat_img = concat(img, normaliza(rev_img, img_title))
     if(show_im):
-        show_img(concat_img, 0, img_title, "Haar wavelets")
+        show_img(concat_img, flag, img_title, "Haar wavelets")
 
     if(save_im):    # Guardamos las imágenes
         save_img("images/rev" + str(param) + "_" + img_title, rev_img, True)
         save_img("images/greedy" + str(param) + "_" + img_title, greedy_img, False)
         #save_img("images/concat" + str(param) + "_" + img_title, concat_img, False)
-        diff_size("images/" + img_title, "images/greedy_" + img_title)
 
-    return err, perc, ratio
+    diff_size(img, comp)
+
+    return comp
 
 """ Obtenemos el gradiente de la imagen
 - img_title: título de la imagen.
@@ -583,7 +603,12 @@ def getDerivates(img_title, flag):
 
     return der
 
+########################
+###   OPTIMIZATION   ###
+########################
+
 """ Experimento greedy a realizar.
+Devuelve el error, porcentaje de descarte y ratio de descompresión obtenidos.
 - img: imagen inicial sobre la que realizar el experimento.
 - thr: parámetro de la función de aproximación.
 """
@@ -613,7 +638,10 @@ def optimization(img_title, flag):
     print("Tamaño de la imagen: {}.".format(img.shape))
     thrs = []; errs = []; pers = []; rats = []
 
-    for thr in range(0,40,2):
+    for thr in range(1,20,1):
+        err, per, rat = experiment_opt(img, thr)
+        thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
+    for thr in range(20,40,2):
         err, per, rat = experiment_opt(img, thr)
         thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
 
@@ -661,17 +689,94 @@ def optimization(img_title, flag):
     return opt_thr, kneedle.knee
 
 #######################
+###   COMPRESSION   ###
+#######################
+
+def compress_img(greedy_img, img_title="Imagen"):
+    comp = []
+    cent = int(np.amax(greedy_img)) + 1
+
+    if(img_title != ""):
+        print("Comprimiendo imagen de coeficientes de '{}' con valor centinela {}."
+              .format(img_title, cent))
+
+    for i in range(len(greedy_img)):
+        row = []
+        count = 0
+
+        for j in range(len(greedy_img[0])-1):
+            if(greedy_img[i][j]==0):
+                count +=1
+            elif(count>0):
+                row.append(cent)
+                row.append(count)
+                count = 0
+                row.append(greedy_img[i][j])
+            else:
+                row.append(greedy_img[i][j])
+
+        if(count>0):
+            if(greedy_img[i][-1]==0):
+                row.append(cent)
+                row.append(count+1)
+            else:
+                row.append(cent)
+                row.append(count)
+        else:
+            row.append(greedy_img[i][-1])
+
+        comp.append(row)
+
+    return comp, cent
+
+def uncompress_img(lists, cent, img_title="Imagen"):
+    if(img_title != ""):
+        print("Descomprimiendo imagen '{}'.".format(img_title))
+
+    img = []
+    act = False
+
+    for li in lists:
+        row = []
+        for j in range(len(li)):
+            if(act == True):
+                act = False
+                for i in range(li[j]):
+                    row.append(0)
+            elif(li[j]!=cent):
+                row.append(li[j])
+            else:   # li[j]==cent
+                act = True
+
+        img.append(row)
+
+    return np.array(img).astype(np.float32)
+
+def test_compress():
+    mat = np.array([[4,0,0,0],
+                    [0,3,0,0],
+                    [1,2,3,0],
+                    [0,0,0,0]
+    ])
+    com, cent = compress_img(mat, "")
+    print(com)
+    un = uncompress_img(com, cent, "")
+    print(un)
+
+
+#######################
 ###       MAIN      ###
 #######################
 
 """ Programa principal. """
 def main():
+    #test_compress()
     experiment("lena.png", 0, threesholding, 40.0)
     #experiment("lion.png", 0, threesholding, 50.0)
     #experiment("lena_color.png", 1, threesholding, 50.0)
     #experiment("alham.png", 1, threesholding, 40.0)
 
-    getDerivates("lena.png", 0)
+    #getDerivates("lena.png", 0)
 
     #optimization("lena.png", 0)
     #optimization("alham.png", 1)
