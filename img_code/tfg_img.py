@@ -10,6 +10,7 @@ import math
 import cv2
 import os
 from kneed import KneeLocator
+from tabulate import tabulate
 
 ###########################################
 ###   LECTURA E IMPRESIÓN DE IMÁGENES   ###
@@ -455,13 +456,17 @@ def diff_size_file(file_org, file_rev):
     print("El archivo original pesa {} bytes y el greedy {} bytes."
           .format(os.stat(file_org).st_size, os.stat(file_rev).st_size))
 
-""" Imprime por pantalla el tamaño en bytes de los archivos.
+""" Imprime por pantalla el tamaño en bytes de los archivos y el factor de compresión.
+Devuelve el factor de compresión.
 - file_org: archivo original.
 - file_rev: arhivo greedy.
 """
 def diff_size(img, comp_img):
+    comp_factor = img.nbytes / np.array(comp_img).nbytes
     print("El archivo original pesa {} bytes y la compresión del greedy {} bytes."
           .format(img.nbytes, np.array(comp_img).nbytes))
+    print("Factor de compresión {}".format(comp_factor))
+    return comp_factor
 
 """ Concatena dos imágenes de la manera más adecuada. Devuelve la imagen resultante.
 - img1: imagen 1 a concatenar.
@@ -511,7 +516,9 @@ def norm_hn(n):
 def norm_pixel(row, col):
     return norm_hn(row+1) * norm_hn(col+1)
 
-""" Experimento greedy a realizar. Devuelve la compresión.
+""" Experimento greedy a realizar.
+Devuelve la compresión, porcentaje de descarte, ratio de dispersión,
+error medio y factor de compresión.
 - img_title: título de la imagen.
 - flag: 0 para B/N y 1 color.
 - fun: función de aproximación (threesholding, m_term).
@@ -521,6 +528,9 @@ def norm_pixel(row, col):
 - save_im (op): indica si guardar las imágenes. Por defecto 'True'.
 """
 def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, save_im = True):
+    print("\n###############################################")
+    print("\tTranformada de Haar de {}".format(img_title))
+    print("###############################################\n  ")
     img = read_img("images/" + img_title, flag)
     print("Tamaño de la imagen: {}.".format(img.shape))
     ext = extend_img(img, False, img_title) # solo la extiende si es necesario
@@ -574,9 +584,9 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
         save_img("images/greedy" + str(param) + "_" + img_title, greedy_img, False)
         #save_img("images/concat" + str(param) + "_" + img_title, concat_img, False)
 
-    diff_size(img, comp_img)
+    factor = diff_size(img, comp_img)
 
-    return comp_img
+    return comp_img, perc, ratio, err, factor
 
 """ Obtenemos el gradiente de la imagen
 - img_title: título de la imagen.
@@ -807,10 +817,28 @@ def test_compress():
 """ Programa principal. """
 def main():
     #test_compress()
-    experiment("lena.png", 0, threesholding, 40.0)
-    #experiment("lion.png", 0, threesholding, 50.0)
-    #experiment("lena_color.png", 1, threesholding, 50.0)
-    #experiment("alham.png", 1, threesholding, 40.0)
+    list = [['Ejemplo', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
+         ['Lena', 40.0],
+         ['León', 50.0],
+         ['Lena (color)', 50.0],
+         ['Alhambra', 40.0]]
+
+    thr = np.array([40.0, 50.0, 50.0, 40.0]);
+    per = np.zeros(4); rat = np.zeros(4); err = np.zeros(4); fac = np.zeros(4)
+
+    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, threesholding, 40.0, show_im=False, save_im=False)
+    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, threesholding, 50.0, show_im=False, save_im=False)
+    #_, per[2], rat[2], err[2], fac[2] = experiment("lena_color.png", 1, threesholding, 50.0, show_im=False)
+    #_, per[3], rat[3], err[3], fac[3] = experiment("alham.png", 1, threesholding, 40.0, show_im=False)
+
+    for k in range(1,5):
+        list[k].append(per[k-1])
+        list[k].append(rat[k-1])
+        list[k].append(err[k-1])
+        list[k].append(fac[k-1])
+
+    print()
+    print(tabulate(list, headers='firstrow', tablefmt='fancy_grid'))
 
     #getDerivates("lena.png", 0)
 
