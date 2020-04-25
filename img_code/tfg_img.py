@@ -530,18 +530,16 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
     # Aplicándole el algoritmo greedy
     greedy_img, perc, ratio = fun(haar_img, param, img_title)
     # Comprimimos
-    comp, cent = compress_img(greedy_img, img_title)
+    comp_img, cent = compress_img(greedy_img, img_title)
 
     """
     AQUÍ REALIZARÍAMOS EL ENVÍO DE 'comp'
     """
 
     # Descomprimimos
-    uncomp = uncompress_img(comp, cent, img_title)
-    print(greedy_img)
-    print(uncomp)
+    uncomp_img = uncompress_img(comp_img, cent, img_title)
     # Restaurando la imagen original
-    rev_img = reverse_image(uncomp, img_title)
+    rev_img = reverse_image(uncomp_img, img_title)
 
     if(rev_img.shape != img.shape): # recorta si hemos extendido
         rev_img = crop_size(rev_img, img.shape[0], img.shape[1], img_title)
@@ -553,6 +551,8 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
         print(haar_img)
         print("\nMatriz después del algoritmo greedy:")
         print(greedy_img)
+        print("\nMatriz de la descompresión:")
+        print(uncomp_img)
         print("\nMatriz de la imagen restaurada:")
         print(rev_img)
         print()
@@ -574,9 +574,9 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
         save_img("images/greedy" + str(param) + "_" + img_title, greedy_img, False)
         #save_img("images/concat" + str(param) + "_" + img_title, concat_img, False)
 
-    diff_size(img, comp)
+    diff_size(img, comp_img)
 
-    return comp
+    return comp_img
 
 """ Obtenemos el gradiente de la imagen
 - img_title: título de la imagen.
@@ -692,65 +692,95 @@ def optimization(img_title, flag):
 ###   COMPRESSION   ###
 #######################
 
+""" Comprime la imagen greedy_img.
+Devuelve la compresión como lista y el valor centinela.
+- greedy_img: imagen de los coeficientes greedy.
+- image_title(op): título de la imagen. Por defecto 'Imagen'.
+"""
 def compress_img(greedy_img, img_title="Imagen"):
     comp = []
-    cent = int(np.amax(greedy_img)) + 1
 
     if(img_title != ""):
-        print("Comprimiendo imagen de coeficientes de '{}' con valor centinela {}."
-              .format(img_title, cent))
+        print("Comprimiendo imagen de coeficientes de '{}'.".format(img_title))
 
-    for i in range(len(greedy_img)):
-        row = []
-        count = 0
+    if(len(greedy_img.shape)==2):
+        cent = int(np.amax(greedy_img)) + 1
 
-        for j in range(len(greedy_img[0])-1):
-            if(greedy_img[i][j]==0):
-                count +=1
-            elif(count>0):
-                row.append(cent)
-                row.append(count)
-                count = 0
-                row.append(greedy_img[i][j])
+        for i in range(len(greedy_img)):
+            row = []
+            count = 0
+
+            for j in range(len(greedy_img[0])-1):
+                if(greedy_img[i][j]==0):
+                    count +=1
+                elif(count>0):
+                    row.append(cent)
+                    row.append(count)
+                    count = 0
+                    row.append(greedy_img[i][j])
+                else:
+                    row.append(greedy_img[i][j])
+
+            if(count>0):
+                if(greedy_img[i][-1]==0):
+                    row.append(cent)
+                    row.append(count+1)
+                else:
+                    row.append(cent)
+                    row.append(count)
             else:
-                row.append(greedy_img[i][j])
+                row.append(greedy_img[i][-1])
 
-        if(count>0):
-            if(greedy_img[i][-1]==0):
-                row.append(cent)
-                row.append(count+1)
-            else:
-                row.append(cent)
-                row.append(count)
-        else:
-            row.append(greedy_img[i][-1])
+            comp.append(row)
 
-        comp.append(row)
+    else:
+        cent = []
+
+        for k in range(len(greedy_img[0][0])):
+            co, ce = compress_img(greedy_img[:,:,k], "")
+            comp.append(co)
+            cent.append(ce)
 
     return comp, cent
 
+""" Descomprime una imagen comprimida. Devuelve la imagen.
+- lists: compresión.
+- cent: valor centinela.
+- image_title(op): título de la imagen. Por defecto 'Imagen'.
+"""
 def uncompress_img(lists, cent, img_title="Imagen"):
     if(img_title != ""):
         print("Descomprimiendo imagen '{}'.".format(img_title))
 
-    img = []
-    act = False
+    if(isinstance(cent, list) == False):    # B/N
+        img = []
+        act = False
 
-    for li in lists:
-        row = []
-        for j in range(len(li)):
-            if(act == True):
-                act = False
-                for i in range(li[j]):
-                    row.append(0)
-            elif(li[j]!=cent):
-                row.append(li[j])
-            else:   # li[j]==cent
-                act = True
+        for li in lists:
+            row = []
+            for j in range(len(li)):
+                if(act == True):
+                    act = False
+                    for i in range(li[j]):
+                        row.append(0)
+                elif(li[j]!=cent):
+                    row.append(li[j])
+                else:   # li[j]==cent
+                    act = True
 
-        img.append(row)
+            img.append(row)
+        img = np.array(img).astype(np.float32)
 
-    return np.array(img).astype(np.float32)
+    else:   # Color
+        un = []
+        for k in range(len(cent)):
+            un.append(uncompress_img(lists[k], cent[k], ""))
+        un = np.array(un)
+        img = np.empty((un[0].shape[0], un[0].shape[1], 3))
+        for k in range(len(cent)):
+            img[:,:,k] = un[k]
+
+    return img
 
 def test_compress():
     mat = np.array([[4,0,0,0],
@@ -758,8 +788,14 @@ def test_compress():
                     [1,2,3,0],
                     [0,0,0,0]
     ])
-    com, cent = compress_img(mat, "")
+    mit = np.array([[[4,0,0], [4,0,0], [4,0,0], [4,0,0]],
+                    [[0,3,0], [0,3,0], [0,3,0], [0,3,0]],
+                    [[1,2,3], [1,2,3], [1,2,3], [1,2,3]],
+                    [[0,0,0], [0,0,0], [0,0,0], [0,0,0]]
+    ])
+    com, cent = compress_img(mit, "")
     print(com)
+    print(cent)
     un = uncompress_img(com, cent, "")
     print(un)
 
