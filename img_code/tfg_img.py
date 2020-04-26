@@ -824,10 +824,10 @@ def main():
 
     per = np.zeros(4); rat = np.zeros(4); err = np.zeros(4); fac = np.zeros(4)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, threesholding, 3.0, show_im=False, save_im=False)
-    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, threesholding, 3.0, show_im=False, save_im=False)
-    #_, per[2], rat[2], err[2], fac[2] = experiment("lena_color.png", 1, threesholding, 50.0, show_im=False)
-    #_, per[3], rat[3], err[3], fac[3] = experiment("alham.png", 1, threesholding, 40.0, show_im=False)
+    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, threesholding, 40.0, show_im=False, save_im=False)
+    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, threesholding, 50.0, show_im=False, save_im=False)
+    _, per[2], rat[2], err[2], fac[2] = experiment("lena_color.png", 1, threesholding, 50.0, show_im=False)
+    _, per[3], rat[3], err[3], fac[3] = experiment("alham.png", 1, threesholding, 40.0, show_im=False)
 
     for k in range(1,5):
         list[k].append(per[k-1])
