@@ -738,6 +738,7 @@ def compress_img(greedy_img, img_title="Imagen"):
                 else:
                     row.append(cent)
                     row.append(count)
+                    row.append(greedy_img[i][-1])
             else:
                 row.append(greedy_img[i][-1])
 
@@ -763,7 +764,7 @@ def uncompress_img(lists, cent, img_title="Imagen"):
         print("Descomprimiendo imagen '{}'.".format(img_title))
 
     if(isinstance(cent, list) == False):    # B/N
-        img = []
+        un = []
         act = False
 
         for li in lists:
@@ -778,17 +779,15 @@ def uncompress_img(lists, cent, img_title="Imagen"):
                 else:   # li[j]==cent
                     act = True
 
-            img.append(row)
-        img = np.array(img).astype(np.float32)
+            un.append(row)
+        img = np.array(un)
 
     else:   # Color
-        un = []
         for k in range(len(cent)):
-            un.append(uncompress_img(lists[k], cent[k], ""))
-        un = np.array(un)
-        img = np.empty((un[0].shape[0], un[0].shape[1], 3))
-        for k in range(len(cent)):
-            img[:,:,k] = un[k]
+            un = uncompress_img(lists[k], cent[k], "")
+            if(k==0):
+                img = np.empty((un.shape[0], un.shape[1], 3))
+            img[:,:,k] = un
 
     return img
 
@@ -798,10 +797,10 @@ def test_compress():
                     [1,2,3,0],
                     [0,0,0,0]
     ])
-    mit = np.array([[[4,0,0], [4,0,0], [4,0,0], [4,0,0]],
+    mit = np.array([[[4,1,0], [4,0,0], [4,0,0], [4,1,0]],
                     [[0,3,0], [0,3,0], [0,3,0], [0,3,0]],
                     [[1,2,3], [1,2,3], [1,2,3], [1,2,3]],
-                    [[0,0,0], [0,0,0], [0,0,0], [0,0,0]]
+                    [[0,0,2], [0,0,0], [0,0,2], [0,0,0]]
     ])
     com, cent = compress_img(mit, "")
     print(com)
@@ -823,11 +822,10 @@ def main():
          ['Lena (color)', 50.0],
          ['Alhambra', 40.0]]
 
-    thr = np.array([40.0, 50.0, 50.0, 40.0]);
     per = np.zeros(4); rat = np.zeros(4); err = np.zeros(4); fac = np.zeros(4)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, threesholding, 40.0, show_im=False, save_im=False)
-    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, threesholding, 50.0, show_im=False, save_im=False)
+    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, threesholding, 3.0, show_im=False, save_im=False)
+    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, threesholding, 3.0, show_im=False, save_im=False)
     #_, per[2], rat[2], err[2], fac[2] = experiment("lena_color.png", 1, threesholding, 50.0, show_im=False)
     #_, per[3], rat[3], err[3], fac[3] = experiment("alham.png", 1, threesholding, 40.0, show_im=False)
 
