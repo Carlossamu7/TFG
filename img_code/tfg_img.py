@@ -698,9 +698,9 @@ def optimization(img_title, flag):
 
     return opt_thr, kneedle.knee
 
-#######################
-###   COMPRESSION   ###
-#######################
+###########################
+###   COMPRESSION RLE   ###
+###########################
 
 """ Comprime la imagen greedy_img.
 Devuelve la compresión como lista y el valor centinela.
@@ -816,20 +816,25 @@ def test_compress():
 """ Programa principal. """
 def main():
     #test_compress()
+    N = 6
     list = [['Ejemplo', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
+         ['Lena', 3.0],
+         ['León', 3.0],
          ['Lena', 40.0],
          ['León', 50.0],
          ['Lena (color)', 50.0],
          ['Alhambra', 40.0]]
 
-    per = np.zeros(4); rat = np.zeros(4); err = np.zeros(4); fac = np.zeros(4)
+    per = np.zeros(N); rat = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, threesholding, 40.0, show_im=False, save_im=False)
-    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, threesholding, 50.0, show_im=False, save_im=False)
-    _, per[2], rat[2], err[2], fac[2] = experiment("lena_color.png", 1, threesholding, 50.0, show_im=False)
-    _, per[3], rat[3], err[3], fac[3] = experiment("alham.png", 1, threesholding, 40.0, show_im=False)
+    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, threesholding, 3.0, show_im=False, save_im=False)
+    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, threesholding, 3.0, show_im=False, save_im=False)
+    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, threesholding, 40.0, show_im=False, save_im=False)
+    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, threesholding, 50.0, show_im=False, save_im=False)
+    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, threesholding, 50.0, show_im=False, save_im=False)
+    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, threesholding, 40.0, show_im=False, save_im=False)
 
-    for k in range(1,5):
+    for k in range(1,N+1):
         list[k].append(per[k-1])
         list[k].append(rat[k-1])
         list[k].append(err[k-1])
