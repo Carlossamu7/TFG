@@ -248,16 +248,16 @@ def reverse_image(haar_img, img_title="Imagen"):
     return rev_haar
 
 """ Asigna 0 a aquellos elementos que estén por debajo de un umbral.
-Devuelve la imagen después de aplicar el threesholding.
+Devuelve la imagen después de aplicar el thresholding.
 - haar_img: imagen después de la transformada de Haar.
 - epsilon: valor umbral.
 - image_title(op): título de la imagen. Por defecto 'Imagen'
 """
-def threesholding(haar_img, epsilon, img_title="Imagen"):
+def thresholding(haar_img, epsilon, img_title="Imagen"):
     if(img_title != ""):
-        print("Aplicando threesholding con epsilon={} a la transformada de Haar de '{}'."
+        print("Aplicando thresholding con epsilon={} a la transformada de Haar de '{}'."
               .format(epsilon, img_title))
-    threeshold_img = haar_img.copy()
+    threshold_img = haar_img.copy()
     count = 0
     not_zero = 0
 
@@ -267,7 +267,7 @@ def threesholding(haar_img, epsilon, img_title="Imagen"):
                 if(haar_img[i][j]!=0.0):
                     not_zero += 1
                 if (abs(haar_img[i][j]) < epsilon):
-                    threeshold_img[i][j] = 0.0
+                    threshold_img[i][j] = 0.0
                     count += 1
 
         total = len(haar_img)*len(haar_img[0])
@@ -279,7 +279,7 @@ def threesholding(haar_img, epsilon, img_title="Imagen"):
                     if(haar_img[i][j][k]!=0.0):
                         not_zero += 1
                     if (abs(haar_img[i][j][k]) < epsilon):
-                        threeshold_img[i][j][k] = 0.0
+                        threshold_img[i][j][k] = 0.0
                         count += 1
 
         total = len(haar_img)*len(haar_img[0])*len(haar_img[0][0])
@@ -291,7 +291,7 @@ def threesholding(haar_img, epsilon, img_title="Imagen"):
         print("Número de píxeles anulados: {} ({}%).".format(count, perc))
         print("Ratio de dispersión: {}.".format(ratio))
 
-    return threeshold_img, perc, ratio
+    return threshold_img, perc, ratio
 
 """ Se queda con la mejor aproximación de m-términos.
 Devuelve la imagen después de aplicar el algoritmo.
@@ -317,7 +317,7 @@ def m_term(haar_img, m, img_title="Imagen"):
                     if(np.amin(list) < val):
                         list[list==np.amin(list)] = val
 
-        m_term_img, perc, ratio = threesholding(haar_img, np.amin(list), "")
+        m_term_img, perc, ratio = thresholding(haar_img, np.amin(list), "")
 
 
     else:
@@ -521,7 +521,7 @@ Devuelve la compresión, porcentaje de descarte, ratio de dispersión,
 error medio y factor de compresión.
 - img_title: título de la imagen.
 - flag: 0 para B/N y 1 color.
-- fun: función de aproximación (threesholding, m_term).
+- fun: función de aproximación (thresholding, m_term).
 - param: parámetro de la función de aproximación.
 - print_mat (op): indica si se deben imprimir las matrices. Por defecto 'False'.
 - show_im (op): indica si mostrar las imágenes. Por defeto 'True'.
@@ -628,7 +628,7 @@ def experiment_opt(img, thr):
     # Calculando la transformada de Haar
     haar_img = haar_image(ext, "")
     # Aplicándole el algoritmo greedy
-    greedy_img, perc, ratio = threesholding(haar_img, thr, "")
+    greedy_img, perc, ratio = thresholding(haar_img, thr, "")
     # Restaurando la imagen original
     rev_img = reverse_image(greedy_img, "")
 
@@ -791,23 +791,6 @@ def uncompress_img(lists, cent, img_title="Imagen"):
 
     return img
 
-def test_compress():
-    mat = np.array([[4,0,0,0],
-                    [0,3,0,0],
-                    [1,2,3,0],
-                    [0,0,0,0]
-    ])
-    mit = np.array([[[4,1,0], [4,0,0], [4,0,0], [4,1,0]],
-                    [[0,3,0], [0,3,0], [0,3,0], [0,3,0]],
-                    [[1,2,3], [1,2,3], [1,2,3], [1,2,3]],
-                    [[0,0,2], [0,0,0], [0,0,2], [0,0,0]]
-    ])
-    com, cent = compress_img(mit, "")
-    print(com)
-    print(cent)
-    un = uncompress_img(com, cent, "")
-    print(un)
-
 
 #######################
 ###       MAIN      ###
@@ -815,24 +798,27 @@ def test_compress():
 
 """ Programa principal. """
 def main():
-    #test_compress()
-    N = 6
+    N = 8
     list = [['Ejemplo', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
          ['Lena', 3.0],
          ['León', 3.0],
          ['Lena', 40.0],
          ['León', 50.0],
-         ['Lena (color)', 50.0],
+         ['Lena (color)', 3.0],
+         ['Alhambra', 3.0],
+         ['Lena (color)', 40.0],
          ['Alhambra', 40.0]]
 
     per = np.zeros(N); rat = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, threesholding, 3.0, show_im=False, save_im=False)
-    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, threesholding, 3.0, show_im=False, save_im=False)
-    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, threesholding, 40.0, show_im=False, save_im=False)
-    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, threesholding, 50.0, show_im=False, save_im=False)
-    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, threesholding, 50.0, show_im=False, save_im=False)
-    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, threesholding, 40.0, show_im=False, save_im=False)
+    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 3.0, show_im=False, save_im=False)
+    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 3.0, show_im=False, save_im=False)
+    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, thresholding, 40.0, show_im=False, save_im=False)
+    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 50.0, show_im=False, save_im=False)
+    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 3.0, show_im=False, save_im=False)
+    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 3.0, show_im=False, save_im=False)
+    _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 40.0, show_im=False, save_im=False)
+    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 40.0, show_im=False, save_im=False)
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
