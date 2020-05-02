@@ -8,7 +8,6 @@ from matplotlib import pyplot as plt
 import numpy as np
 import math
 import cv2
-import os
 from kneed import KneeLocator
 from tabulate import tabulate
 
@@ -448,14 +447,6 @@ def crop_size(img, rows, cols, img_title="Imagen"):
             print("Recortando imagen '{}' a tamaño ({}, {}, {}).".format(img_title, rows, cols, 3))
     return img[:rows, :cols]
 
-""" Imprime por pantalla el tamaño en bytes de los archivos.
-- file_org: archivo original.
-- file_rev: arhivo greedy.
-"""
-def diff_size_file(file_org, file_rev):
-    print("El archivo original pesa {} bytes y el greedy {} bytes."
-          .format(os.stat(file_org).st_size, os.stat(file_rev).st_size))
-
 """ Imprime por pantalla el tamaño en bytes de los archivos y el factor de compresión.
 Devuelve el factor de compresión.
 - file_org: archivo original.
@@ -580,9 +571,9 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
         show_img(concat_img, flag, img_title, "Haar wavelets")
 
     if(save_im):    # Guardamos las imágenes
-        save_img("images/rev" + str(param) + "_" + img_title, rev_img, True)
-        save_img("images/greedy" + str(param) + "_" + img_title, greedy_img, False)
-        #save_img("images/concat" + str(param) + "_" + img_title, concat_img, False)
+        save_img("results/rev" + str(param) + "_" + img_title, rev_img, True)
+        save_img("results/greedy" + str(param) + "_" + img_title, greedy_img, False)
+        save_img("results/concat" + str(param) + "_" + img_title, concat_img, False)
 
     factor = diff_size(img, comp_img)
 
@@ -593,6 +584,9 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
 - flag: 0 para B/N y 1 color.
 """
 def getDerivates(img_title, flag):
+    print("\n###############################################")
+    print("\tDerivada de {}".format(img_title))
+    print("###############################################\n  ")
     img = read_img("images/" + img_title, flag)
     print("Tamaño de la imagen: {}.".format(img.shape))
     ext = extend_img(img, False, img_title) # solo la extiende si es necesario
@@ -609,94 +603,9 @@ def getDerivates(img_title, flag):
             der[i][j] = (der[i][j]-min)/(max-min) * 255
 
     show_img(der, 0, img_title, "Derivadas")
-    save_img("images/der_" + img_title, der)
+    save_img("results/der_" + img_title, der)
 
     return der
-
-########################
-###   OPTIMIZATION   ###
-########################
-
-""" Experimento greedy a realizar.
-Devuelve el error, porcentaje de descarte y ratio de descompresión obtenidos.
-- img: imagen inicial sobre la que realizar el experimento.
-- thr: parámetro de la función de aproximación.
-"""
-def experiment_opt(img, thr):
-    ext = extend_img(img, False, "") # solo la extiende si es necesario
-
-    # Calculando la transformada de Haar
-    haar_img = haar_image(ext, "")
-    # Aplicándole el algoritmo greedy
-    greedy_img, perc, ratio = thresholding(haar_img, thr, "")
-    # Restaurando la imagen original
-    rev_img = reverse_image(greedy_img, "")
-
-    if(rev_img.shape != img.shape): # recorta si hemos extendido
-        rev_img = crop_size(rev_img, img.shape[0], img.shape[1], "")
-
-    # Calulamos el error medio de la imagen original y la revertida
-    err = error(img, rev_img, "")
-    return err, perc, ratio
-
-""" Optimización del error medio. Devuelve el punto 'knee'.
-- img_title: título de la imagen.
-- flag: 0 para B/N y 1 color.
-"""
-def optimization(img_title, flag):
-    img = read_img("images/" + img_title, flag)
-    print("Tamaño de la imagen: {}.".format(img.shape))
-    thrs = []; errs = []; pers = []; rats = []
-
-    for thr in range(1,20,1):
-        err, per, rat = experiment_opt(img, thr)
-        thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
-    for thr in range(20,40,2):
-        err, per, rat = experiment_opt(img, thr)
-        thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
-
-    # Imprimo las listas
-    print("Umbrales:")
-    print(thrs)
-    print("Errores:")
-    print(errs)
-    print("Porcentajes de descarte:")
-    print(pers)
-    print("Ratios de dispersión:")
-    print(rats)
-
-    # Calculo el 'knee'
-    kneedle = KneeLocator(pers, errs, S=1.0, curve='convex', direction='increasing')
-    print("El punto 'knee' es: {}".format(round(kneedle.knee, 2)))
-
-    # Busco el umbral asociado a ese 'knee'
-    for i in range(len(pers)):
-        if (pers[i] == kneedle.knee):
-            opt_thr = thrs[i]
-    print("El umbral asociado es: {}".format(opt_thr))
-
-    # Imprimo las gráficas
-    plt.plot(pers, errs, '-o', linewidth=1)
-    plt.vlines(kneedle.knee, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Punto 'knee'")
-    plt.xlabel("Porcentaje de descartados")
-    plt.ylabel("Error medio")
-    plt.legend()
-    plt.title("Relación porcentaje de descarte - error para '{}'".format(img_title))
-    plt.gcf().canvas.set_window_title('TFG')
-    plt.savefig("images/graf_pers_" + img_title)
-    plt.show()
-
-    plt.plot(thrs, errs, '-o', linewidth=1)
-    plt.vlines(opt_thr, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Umbral del punto 'knee'")
-    plt.xlabel("Umbral")
-    plt.ylabel("Error medio")
-    plt.legend(loc="lower right")
-    plt.title("Relación umbral - error para '{}'".format(img_title))
-    plt.gcf().canvas.set_window_title('TFG')
-    plt.savefig("images/graf_thrs_" + img_title)
-    plt.show()
-
-    return opt_thr, kneedle.knee
 
 ###########################
 ###   COMPRESSION RLE   ###
@@ -791,6 +700,93 @@ def uncompress_img(lists, cent, img_title="Imagen"):
 
     return img
 
+########################
+###   OPTIMIZATION   ###
+########################
+
+""" Experimento greedy a realizar.
+Devuelve el error, porcentaje de descarte y ratio de descompresión obtenidos.
+- img: imagen inicial sobre la que realizar el experimento.
+- thr: parámetro de la función de aproximación.
+"""
+def experiment_opt(img, thr):
+    ext = extend_img(img, False, "") # solo la extiende si es necesario
+
+    # Calculando la transformada de Haar
+    haar_img = haar_image(ext, "")
+    # Aplicándole el algoritmo greedy
+    greedy_img, perc, ratio = thresholding(haar_img, thr, "")
+    # Restaurando la imagen original
+    rev_img = reverse_image(greedy_img, "")
+
+    if(rev_img.shape != img.shape): # recorta si hemos extendido
+        rev_img = crop_size(rev_img, img.shape[0], img.shape[1], "")
+
+    # Calulamos el error medio de la imagen original y la revertida
+    err = error(img, rev_img, "")
+    return err, perc, ratio
+
+""" Optimización del error medio. Devuelve el punto 'knee'.
+- img_title: título de la imagen.
+- flag: 0 para B/N y 1 color.
+"""
+def optimization(img_title, flag):
+    print("\n###############################################")
+    print("\tOptimizando umbral de {}".format(img_title))
+    print("###############################################\n  ")
+    img = read_img("images/" + img_title, flag)
+    print("Tamaño de la imagen: {}.".format(img.shape))
+    thrs = []; errs = []; pers = []; rats = []
+
+    for thr in range(1,20,1):
+        err, per, rat = experiment_opt(img, thr)
+        thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
+    for thr in range(20,40,2):
+        err, per, rat = experiment_opt(img, thr)
+        thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
+
+    # Imprimo las listas
+    print("Umbrales:")
+    print(thrs)
+    print("Errores:")
+    print(errs)
+    print("Porcentajes de descarte:")
+    print(pers)
+    print("Ratios de dispersión:")
+    print(rats)
+
+    # Calculo el 'knee'
+    kneedle = KneeLocator(pers, errs, S=1.0, curve='convex', direction='increasing')
+    print("El punto 'knee' es: {}".format(round(kneedle.knee, 2)))
+
+    # Busco el umbral asociado a ese 'knee'
+    for i in range(len(pers)):
+        if (pers[i] == kneedle.knee):
+            opt_thr = thrs[i]
+    print("El umbral asociado es: {}".format(opt_thr))
+
+    # Imprimo las gráficas
+    plt.plot(pers, errs, '-o', linewidth=1)
+    plt.vlines(kneedle.knee, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Punto 'knee'")
+    plt.xlabel("Porcentaje de descartados")
+    plt.ylabel("Error medio")
+    plt.legend()
+    plt.title("Relación porcentaje de descarte - error para '{}'".format(img_title))
+    plt.gcf().canvas.set_window_title('TFG')
+    plt.savefig("results/graf_pers_" + img_title)
+    plt.show()
+
+    plt.plot(thrs, errs, '-o', linewidth=1)
+    plt.vlines(opt_thr, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Umbral del punto 'knee'")
+    plt.xlabel("Umbral")
+    plt.ylabel("Error medio")
+    plt.legend(loc="lower right")
+    plt.title("Relación umbral - error para '{}'".format(img_title))
+    plt.gcf().canvas.set_window_title('TFG')
+    plt.savefig("results/graf_thrs_" + img_title)
+    plt.show()
+
+    return opt_thr, kneedle.knee
 
 #######################
 ###       MAIN      ###
@@ -811,14 +807,14 @@ def main():
 
     per = np.zeros(N); rat = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 3.0, show_im=False, save_im=False)
-    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 3.0, show_im=False, save_im=False)
-    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, thresholding, 40.0, show_im=False, save_im=False)
-    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 50.0, show_im=False, save_im=False)
-    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 3.0, show_im=False, save_im=False)
-    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 3.0, show_im=False, save_im=False)
-    _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 40.0, show_im=False, save_im=False)
-    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 40.0, show_im=False, save_im=False)
+    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 3.0, show_im=False, save_im=True)
+    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 3.0, show_im=False, save_im=True)
+    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, thresholding, 40.0, show_im=False, save_im=True)
+    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 50.0, show_im=False, save_im=True)
+    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 3.0, show_im=False, save_im=True)
+    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 3.0, show_im=False, save_im=True)
+    _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 40.0, show_im=False, save_im=True)
+    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 40.0, show_im=False, save_im=True)
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
@@ -829,10 +825,10 @@ def main():
     print()
     print(tabulate(list, headers='firstrow', tablefmt='fancy_grid'))
 
-    #getDerivates("lena.png", 0)
+    getDerivates("lena.png", 0)
 
-    #optimization("lena.png", 0)
-    #optimization("alham.png", 1)
+    optimization("lena.png", 0)
+    optimization("alham.png", 1)
 
 if __name__ == "__main__":
 	main()
