@@ -246,57 +246,58 @@ def reverse_image(haar_img, img_title="Imagen"):
 
     return rev_haar
 
+""" Cuenta el número de elementos distintos de cero de una imagen
+Devuelve la imagen después de aplicar el thresholding.
+- img: imagen sobre la que calcular el número de elementos distintos de cero.
+- rows: filas para el conteo.
+- cols: columnas para el conteo.
+"""
+def not_zero(img, rows, cols):
+    cont = 0
+
+    if(len(img.shape)==2):
+        for i in range(rows):
+            for j in range(cols):
+                if(img[i][j]!=0):
+                    cont += 1
+    else:
+        for k in range(3):
+            cont += not_zero(img[:,:,k], rows, cols)
+
+    return cont
+
 """ Asigna 0 a aquellos elementos que estén por debajo de un umbral.
 Devuelve la imagen después de aplicar el thresholding.
 - haar_img: imagen después de la transformada de Haar.
 - epsilon: valor umbral.
-- image_title(op): título de la imagen. Por defecto 'Imagen'
+- image_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def thresholding(haar_img, epsilon, img_title="Imagen"):
     if(img_title != ""):
         print("Aplicando thresholding con epsilon={} a la transformada de Haar de '{}'."
               .format(epsilon, img_title))
     threshold_img = haar_img.copy()
-    count = 0
-    not_zero = 0
 
     if(len(haar_img.shape)==2):
         for i in range(len(haar_img)):
             for j in range(len(haar_img[0])):
-                if(haar_img[i][j]!=0.0):
-                    not_zero += 1
                 if (abs(haar_img[i][j]) < epsilon):
                     threshold_img[i][j] = 0.0
-                    count += 1
-
-        total = len(haar_img)*len(haar_img[0])
 
     else:
         for i in range(len(haar_img)):
             for j in range(len(haar_img[0])):
                 for k in range(len(haar_img[0][0])):
-                    if(haar_img[i][j][k]!=0.0):
-                        not_zero += 1
                     if (abs(haar_img[i][j][k]) < epsilon):
                         threshold_img[i][j][k] = 0.0
-                        count += 1
 
-        total = len(haar_img)*len(haar_img[0])*len(haar_img[0][0])
-
-    perc = round(100*count/total, 2)
-    ratio = round(not_zero/(total-count), 4)
-
-    if(img_title != ""):
-        print("Número de píxeles anulados: {} ({}%).".format(count, perc))
-        print("Ratio de dispersión: {}.".format(ratio))
-
-    return threshold_img, perc, ratio
+    return threshold_img
 
 """ Se queda con la mejor aproximación de m-términos.
 Devuelve la imagen después de aplicar el algoritmo.
 - haar_img: imagen después de la transformada de Haar.
 - m: número de términos que nos vamos a quedar.
-- image_title(op): título de la imagen. Por defecto 'Imagen'
+- image_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def m_term(haar_img, m, img_title="Imagen"):
     if(img_title != ""):
@@ -529,12 +530,24 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
     # Calculando la transformada de Haar
     haar_img = haar_image(ext, img_title)
     # Aplicándole el algoritmo greedy
-    greedy_img, perc, ratio = fun(haar_img, param, img_title)
+    not_zero_before = not_zero(haar_img, len(img), len(img[0]))
+    greedy_img = fun(haar_img, param, img_title)
+    not_zero_after = not_zero(greedy_img, len(img), len(img[0]))
+    # Calulando ratio y perc
+    if(len(img.shape)==2):
+        total = len(img)*len(img[0])
+    else:
+        total = len(img)*len(img[0])*len(img[0][0])
+    perc = round(100*(total-not_zero_after)/total, 2)
+    ratio = round(not_zero_before/not_zero_after, 4)
+    if(img_title != ""):
+        print("Número de píxeles anulados: {} ({}%).".format(total-not_zero_after, perc))
+        print("Ratio de dispersión: {}.".format(ratio))
     # Comprimimos
     comp_img, cent = compress_img(greedy_img, img_title)
 
     """
-    AQUÍ REALIZARÍAMOS EL ENVÍO DE 'comp'
+    AQUÍ REALIZARÍAMOS EL ENVÍO DE 'comp_img'
     """
 
     # Descomprimimos
@@ -715,7 +728,16 @@ def experiment_opt(img, thr):
     # Calculando la transformada de Haar
     haar_img = haar_image(ext, "")
     # Aplicándole el algoritmo greedy
-    greedy_img, perc, ratio = thresholding(haar_img, thr, "")
+    not_zero_before = not_zero(haar_img, len(img), len(img[0]))
+    greedy_img = thresholding(haar_img, thr, "")
+    not_zero_after = not_zero(greedy_img, len(img), len(img[0]))
+    # Calulando ratio y perc
+    if(len(img.shape)==2):
+        total = len(img)*len(img[0])
+    else:
+        total = len(img)*len(img[0])*len(img[0][0])
+    perc = round(100*(total-not_zero_after)/total, 2)
+    ratio = round(not_zero_before/not_zero_after, 4)
     # Restaurando la imagen original
     rev_img = reverse_image(greedy_img, "")
 
@@ -807,14 +829,14 @@ def main():
 
     per = np.zeros(N); rat = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 3.0, show_im=False, save_im=True)
-    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 3.0, show_im=False, save_im=True)
-    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, thresholding, 40.0, show_im=False, save_im=True)
-    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 40.0, show_im=False, save_im=True)
-    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 3.0, show_im=False, save_im=True)
-    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 3.0, show_im=False, save_im=True)
-    _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 40.0, show_im=False, save_im=True)
-    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 40.0, show_im=False, save_im=True)
+    #_, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 3.0, show_im=False, save_im=False)
+    #_, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 3.0, show_im=False, save_im=False)
+    #_, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, thresholding, 40.0, show_im=False, save_im=False)
+    #_, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 40.0, show_im=False, save_im=False)
+    #_, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 3.0, show_im=False, save_im=False)
+    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 3.0, show_im=False, save_im=False)
+    #_, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 40.0, show_im=False, save_im=False)
+    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 40.0, show_im=False, save_im=False)
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
