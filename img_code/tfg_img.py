@@ -317,23 +317,15 @@ def m_term(haar_img, m, img_title="Imagen"):
                     if(np.amin(list) < val):
                         list[list==np.amin(list)] = val
 
-        m_term_img, perc, ratio = thresholding(haar_img, np.amin(list), "")
+        m_term_img = thresholding(haar_img, np.amin(list), "")
 
 
     else:
         m_term_img = np.zeros(haar_img.shape)
-        perc = 0
-        ratio = 0
         for k in range(3):
-            m_term_img[:,:,k], per, rat = m_term(haar_img[:,:,k], m, "")
-            perc += per
-            ratio += rat
+            m_term_img[:,:,k] = m_term(haar_img[:,:,k], m, "")
 
-    if(img_title != ""):
-        print("Porcentaje de píxeles descartados: {}%.".format(perc))
-        print("Ratio de dispersión: {}.".format(ratio))
-
-    return m_term_img, perc, ratio
+    return m_term_img
 
 """ Calcula el error medio de la imagen original y su aproximación.
 Devuelve el error medio.
@@ -359,13 +351,14 @@ def error(img, back_img, img_title="Imagen"):
     err = round(err, 4)
     if(img_title != ""):
         print("Error medio de '{}' y su aproximación: {}.".format(img_title, err))
+
     return err
 
 """ Recorta una imagen a la de tamaño 2^p*2^q más grande dentro de ella.
 Devuelve la imagen recortada.
 - img: imagen a recortar.
 - sq (op): indica si extender de manera cuadrada. Por defecto False.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def crop_img(img, sq=False, img_title="Imagen"):
     p = 2**int(math.log(len(img), 2))
@@ -390,7 +383,7 @@ def crop_img(img, sq=False, img_title="Imagen"):
 Devuelve la imagen extendida.
 - img: imagen a extender.
 - sq (op): indica si extender de manera cuadrada. Por defecto False.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def extend_img(img, sq=False, img_title="Imagen"):
     n = math.log(len(img), 2)
@@ -436,9 +429,9 @@ def extend_img(img, sq=False, img_title="Imagen"):
 """ Recorta una imagen a la de tamaño 2^p*2^q más grande dentro de ella.
 Devuelve la imagen recortada.
 - img: imagen a recortar.
-- rows:
-- cols:
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- rows: número de filas a recortar.
+- cols: número de columnas a recortar.
+- img_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def crop_size(img, rows, cols, img_title="Imagen"):
     if(img_title != ""):
