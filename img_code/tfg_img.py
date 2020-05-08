@@ -172,9 +172,9 @@ def haar_row(img):
 """ Calcula la transformada de Haar una imágen.
 Devuelve la imagen de los coeficientes de Haar.
 - img: imagen original a transformar.
-- img_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto "".
 """
-def haar_image(img, img_title="Imagen"):
+def haar_image(img, img_title=""):
     if(img_title != ""):
         print("Calculando la transformada de Haar a la imagen '" + img_title +"'.")
 
@@ -213,9 +213,9 @@ def reverse_haar(front, the_rest, power):
 """ Dada una transformada de Haar de una imagen calcula su inversa por filas.
 Devuelve la inversa por filas.
 - haar_img: imagen después de la transformada de Haar.
-- img_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto "".
 """
-def reverse_row(haar_img, img_title="Imagen"):
+def reverse_row(haar_img, img_title=""):
     row = []
     for pixels in haar_img:
         row.append(reverse_haar(pixels[:1], pixels[1:], 0))
@@ -224,9 +224,9 @@ def reverse_row(haar_img, img_title="Imagen"):
 """ Dada una transformada de Haar de una imagen calcula su inversa.
 Devuelve la imagen original.
 - haar_img: imagen después de la transformada de Haar.
-- img_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto "".
 """
-def reverse_image(haar_img, img_title="Imagen"):
+def reverse_image(haar_img, img_title=""):
     if(img_title != ""):
         print("Restaurando la imagen original de la transformada de Haar de '" + img_title + "'.")
 
@@ -270,9 +270,9 @@ def not_zero(img, rows, cols):
 Devuelve la imagen después de aplicar el thresholding.
 - haar_img: imagen después de la transformada de Haar.
 - epsilon: valor umbral.
-- img_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto "".
 """
-def thresholding(haar_img, epsilon, img_title="Imagen"):
+def thresholding(haar_img, epsilon, img_title=""):
     if(img_title != ""):
         print("Aplicando thresholding con epsilon={} a la transformada de Haar de '{}'."
               .format(epsilon, img_title))
@@ -297,9 +297,9 @@ def thresholding(haar_img, epsilon, img_title="Imagen"):
 Devuelve la imagen después de aplicar el algoritmo.
 - haar_img: imagen después de la transformada de Haar.
 - m: número de términos que nos vamos a quedar.
-- img_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto "".
 """
-def m_term(haar_img, m, img_title="Imagen"):
+def m_term(haar_img, m, img_title=""):
     if(img_title != ""):
         print("Aplicando algoritmo de m-términos (m={}) a la transformada de Haar de '{}'."
               .format(m, img_title))
@@ -331,9 +331,9 @@ def m_term(haar_img, m, img_title="Imagen"):
 Devuelve el error medio.
 - img: imagen original.
 - back_img: imagen aproximada.
-- img_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto "".
 """
-def error(img, back_img, img_title="Imagen"):
+def error(img, back_img, img_title=""):
     err = 0
 
     if(len(img.shape)==2):
@@ -358,9 +358,9 @@ def error(img, back_img, img_title="Imagen"):
 Devuelve la imagen recortada.
 - img: imagen a recortar.
 - sq (op): indica si extender de manera cuadrada. Por defecto False.
-- img_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto "".
 """
-def crop_img(img, sq=False, img_title="Imagen"):
+def crop_img(img, sq=False, img_title=""):
     p = 2**int(math.log(len(img), 2))
     q = 2**int(math.log(len(img[0]), 2))
 
@@ -383,9 +383,9 @@ def crop_img(img, sq=False, img_title="Imagen"):
 Devuelve la imagen extendida.
 - img: imagen a extender.
 - sq (op): indica si extender de manera cuadrada. Por defecto False.
-- img_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto "".
 """
-def extend_img(img, sq=False, img_title="Imagen"):
+def extend_img(img, sq=False, img_title=""):
     n = math.log(len(img), 2)
     m = math.log(len(img[0]), 2)
     to_extend = False
@@ -431,9 +431,9 @@ Devuelve la imagen recortada.
 - img: imagen a recortar.
 - rows: número de filas a recortar.
 - cols: número de columnas a recortar.
-- img_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto "".
 """
-def crop_size(img, rows, cols, img_title="Imagen"):
+def crop_size(img, rows, cols, img_title=""):
     if(img_title != ""):
         if(len(img.shape)==2):
             print("Recortando imagen '{}' a tamaño ({}, {}).".format(img_title, rows, cols))
@@ -512,7 +512,7 @@ error medio y factor de compresión.
 - show_im (op): indica si mostrar las imágenes. Por defeto 'True'.
 - save_im (op): indica si guardar las imágenes. Por defecto 'True'.
 """
-def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, save_im = True):
+def experiment(img_title, flag, fun, param, print_mat=False, show_im=True, save_im=True):
     print("\n###############################################")
     print("\tTranformada de Haar de {}".format(img_title))
     print("###############################################\n  ")
@@ -532,7 +532,10 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
     else:
         total = len(img)*len(img[0])*len(img[0][0])
     perc = round(100*(total-not_zero_after)/total, 2)
-    ratio = round(not_zero_before/not_zero_after, 4)
+    if(not_zero_after!=0):
+        ratio = round(not_zero_before/not_zero_after, 4)
+    else:
+        ratio = math.inf
     if(img_title != ""):
         print("Número de píxeles anulados: {} ({}%).".format(total-not_zero_after, perc))
         print("Ratio de dispersión: {}.".format(ratio))
@@ -591,7 +594,7 @@ def experiment(img_title, flag, fun, param, print_mat = False, show_im = True, s
 """
 def getDerivates(img_title, flag):
     print("\n###############################################")
-    print("\tDerivada de {}".format(img_title))
+    print("\tDerivada de '{}'".format(img_title))
     print("###############################################\n  ")
     img = read_img("images/" + img_title, flag)
     print("Tamaño de la imagen: {}.".format(img.shape))
@@ -730,7 +733,10 @@ def experiment_opt(img, thr):
     else:
         total = len(img)*len(img[0])*len(img[0][0])
     perc = round(100*(total-not_zero_after)/total, 2)
-    ratio = round(not_zero_before/not_zero_after, 4)
+    if(not_zero_after!=0):
+        ratio = round(not_zero_before/not_zero_after, 4)
+    else:
+        ratio = math.inf
     # Restaurando la imagen original
     rev_img = reverse_image(greedy_img, "")
 
@@ -741,13 +747,13 @@ def experiment_opt(img, thr):
     err = error(img, rev_img, "")
     return err, perc, ratio
 
-""" Optimización del error medio. Devuelve el punto 'knee'.
+""" Optimización del error medio. Devuelve el punto 'knee' y el umbral y error asociado.
 - img_title: título de la imagen.
 - flag: 0 para B/N y 1 color.
 """
 def optimization(img_title, flag):
     print("\n###############################################")
-    print("\tOptimizando umbral de {}".format(img_title))
+    print("\tOptimizando umbral de '{}'".format(img_title))
     print("###############################################\n  ")
     img = read_img("images/" + img_title, flag)
     print("Tamaño de la imagen: {}.".format(img.shape))
@@ -772,12 +778,13 @@ def optimization(img_title, flag):
 
     # Calculo el 'knee'
     kneedle = KneeLocator(pers, errs, S=1.0, curve='convex', direction='increasing')
-    print("El punto 'knee' es: {}".format(round(kneedle.knee, 2)))
-
     # Busco el umbral asociado a ese 'knee'
     for i in range(len(pers)):
         if (pers[i] == kneedle.knee):
             opt_thr = thrs[i]
+            opt_err = errs[i]
+
+    print("El punto 'knee' es: {}".format(round(kneedle.knee, 2)))
     print("El umbral asociado es: {}".format(opt_thr))
 
     # Imprimo las gráficas
@@ -801,7 +808,7 @@ def optimization(img_title, flag):
     plt.savefig("results/graf_thrs_" + img_title)
     plt.show()
 
-    return opt_thr, kneedle.knee
+    return opt_thr, kneedle.knee, opt_err
 
 #######################
 ###       MAIN      ###
@@ -828,7 +835,7 @@ def main():
     #_, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 40.0, show_im=False, save_im=False)
     #_, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 3.0, show_im=False, save_im=False)
     _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 3.0, show_im=False, save_im=False)
-    #_, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 40.0, show_im=False, save_im=False)
+    _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 40.0, show_im=False, save_im=False)
     _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 40.0, show_im=False, save_im=False)
 
     for k in range(1,N+1):
