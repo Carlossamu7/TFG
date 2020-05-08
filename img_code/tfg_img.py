@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+img_title# -*- coding: utf-8 -*-
 """
 Created on Mon Feb 17 17:54:38 2020
 @author: Carlos Sánchez Muñoz
@@ -37,16 +37,16 @@ def read_img(file_name, flag_color = 1):
 
 """ Normaliza una matriz.
 - image: matriz a normalizar.
-- image_title (op): título de la imagen. Por defecto ' '.
+- img_title (op): título de la imagen. Por defecto ' '.
 """
-def normaliza(image, image_title = " "):
+def normaliza(image, img_title = " "):
     norm = np.copy(image)
     # En caso de que los máximos sean 255 o las mínimos 0 no iteramos en los bucles
     if len(image.shape) == 2:
         max = np.amax(image)
         min = np.amin(image)
         if max>255 or min<0:
-            print("Normalizando imagen '" + image_title + "'")
+            print("Normalizando imagen '" + img_title + "'")
             for i in range(image.shape[0]):
                 for j in range(image.shape[1]):
                     norm[i][j] = (image[i][j]-min)/(max-min) * 255
@@ -55,7 +55,7 @@ def normaliza(image, image_title = " "):
         min = [np.amin(image[:,:,0]), np.amin(image[:,:,1]), np.amin(image[:,:,2])]
 
         if max[0]>255 or max[1]>255 or max[2]>255 or min[0]<0 or min[1]<0 or min[2]<0:
-            print("Normalizando imagen '" + image_title + "'")
+            print("Normalizando imagen '" + img_title + "'")
             for i in range(image.shape[0]):
                 for j in range(image.shape[1]):
                     for k in range(image.shape[2]):
@@ -66,18 +66,18 @@ def normaliza(image, image_title = " "):
 """ Imprime una imagen a través de una matriz.
 - image: imagen a imprimir.
 - flag_color (op): bandera para indicar si la imagen es en B/N o color. Por defecto color.
-- image_title(op): título de la imagen. Por defecto 'Imagen'
+- img_title(op): título de la imagen. Por defecto 'Imagen'
 - window_title (op): título de la ventana. Por defecto 'Ejercicio'
 """
-def show_img(image, flag_color=1, image_title = "Imagen", window_title = "Ejercicio"):
-    img_show = normaliza(image, image_title)            # Normalizamos la matriz
+def show_img(image, flag_color=1, img_title = "Imagen", window_title = "Ejercicio"):
+    img_show = normaliza(image, img_title)            # Normalizamos la matriz
     img_show = img_show.astype(np.uint8)
     plt.figure(0).canvas.set_window_title(window_title) # Ponemos nombre a la ventana
     if flag_color == 0:
         plt.imshow(img_show, cmap = "gray")
     else:
         plt.imshow(img_show)
-    plt.title(image_title)              # Ponemos nombre a la imagen
+    plt.title(img_title)              # Ponemos nombre a la imagen
     plt.xticks([])                      # Se le pasa una lista de posiciones en las que se deben colocar los
     plt.yticks([])                      # ticks, si pasamos una lista vacía deshabilitamos los xticks e yticks
     plt.show()
@@ -172,7 +172,7 @@ def haar_row(img):
 """ Calcula la transformada de Haar una imágen.
 Devuelve la imagen de los coeficientes de Haar.
 - img: imagen original a transformar.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def haar_image(img, img_title="Imagen"):
     if(img_title != ""):
@@ -213,7 +213,7 @@ def reverse_haar(front, the_rest, power):
 """ Dada una transformada de Haar de una imagen calcula su inversa por filas.
 Devuelve la inversa por filas.
 - haar_img: imagen después de la transformada de Haar.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def reverse_row(haar_img, img_title="Imagen"):
     row = []
@@ -224,7 +224,7 @@ def reverse_row(haar_img, img_title="Imagen"):
 """ Dada una transformada de Haar de una imagen calcula su inversa.
 Devuelve la imagen original.
 - haar_img: imagen después de la transformada de Haar.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def reverse_image(haar_img, img_title="Imagen"):
     if(img_title != ""):
@@ -270,7 +270,7 @@ def not_zero(img, rows, cols):
 Devuelve la imagen después de aplicar el thresholding.
 - haar_img: imagen después de la transformada de Haar.
 - epsilon: valor umbral.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def thresholding(haar_img, epsilon, img_title="Imagen"):
     if(img_title != ""):
@@ -297,7 +297,7 @@ def thresholding(haar_img, epsilon, img_title="Imagen"):
 Devuelve la imagen después de aplicar el algoritmo.
 - haar_img: imagen después de la transformada de Haar.
 - m: número de términos que nos vamos a quedar.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def m_term(haar_img, m, img_title="Imagen"):
     if(img_title != ""):
@@ -331,7 +331,7 @@ def m_term(haar_img, m, img_title="Imagen"):
 Devuelve el error medio.
 - img: imagen original.
 - back_img: imagen aproximada.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto 'Imagen'.
 """
 def error(img, back_img, img_title="Imagen"):
     err = 0
@@ -620,9 +620,9 @@ def getDerivates(img_title, flag):
 """ Comprime la imagen greedy_img.
 Devuelve la compresión como lista y el valor centinela.
 - greedy_img: imagen de los coeficientes greedy.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto "".
 """
-def compress_img(greedy_img, img_title="Imagen"):
+def compress_img(greedy_img, img_title=""):
     comp = []
 
     if(img_title != ""):
@@ -672,9 +672,9 @@ def compress_img(greedy_img, img_title="Imagen"):
 """ Descomprime una imagen comprimida. Devuelve la imagen.
 - lists: compresión.
 - cent: valor centinela.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- img_title(op): título de la imagen. Por defecto "".
 """
-def uncompress_img(lists, cent, img_title="Imagen"):
+def uncompress_img(lists, cent, img_title=""):
     if(img_title != ""):
         print("Descomprimiendo imagen '{}'.".format(img_title))
 

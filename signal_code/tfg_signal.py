@@ -9,7 +9,6 @@ import numpy as np
 import math
 from tabulate import tabulate
 
-
 ##########################
 ###   HAAR TRANSFORM   ###
 ##########################
@@ -37,41 +36,40 @@ def haar_transform(list, offset):
 - power: 2 elevado a este exponente me dice el índice de the_rest en la lista.
 """
 def reverse_haar(front, the_rest, power):
-	reverse = []
+    reverse = []
 
-	for i in range(len(front)):
-		reverse.append((front[i] + the_rest[i]) / math.sqrt(2))
-		reverse.append((front[i] - the_rest[i]) / math.sqrt(2))
+    for i in range(len(front)):
+        reverse.append((front[i] + the_rest[i]) / math.sqrt(2))
+        reverse.append((front[i] - the_rest[i]) / math.sqrt(2))
 
-	if(len(the_rest) > len(reverse)):
-		the_rest = the_rest[2**power:]
-		power += 1
-		return reverse_haar(reverse, the_rest, power)
-	else:
-		return reverse
+    if(len(the_rest) > len(reverse)):
+        the_rest = the_rest[2**power:]
+        power += 1
+        return reverse_haar(reverse, the_rest, power)
+    else:
+        return reverse
 
-""" Cuenta el número de elementos distintos de cero de una imagen
-Devuelve la imagen después de aplicar el thresholding.
-- img: imagen sobre la que calcular el número de elementos distintos de cero.
-- rows: filas para el conteo.
-- cols: columnas para el conteo.
+""" Cuenta el número de elementos distintos de cero de una señal
+Devuelve la señal después de aplicar el thresholding.
+- signal: señal sobre la que calcular el número de elementos distintos de cero.
+- size: tamaño para el conteo.
 """
-def not_zero(img, rows, cols):
+def not_zero(signal, size):
     cont = 0
 
-    for i in range(rows):
-            if(img[i]!=0):
+    for i in range(size):
+            if(signal[i]!=0):
                 cont += 1
 
     return cont
 
 """ Asigna 0 a aquellos elementos que estén por debajo de un umbral.
-Devuelve la imagen después de aplicar el thresholding.
-- haar_signal: imagen después de la transformada de Haar.
+Devuelve la señal después de aplicar el thresholding.
+- haar_signal: señal después de la transformada de Haar.
 - epsilon: valor umbral.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- signal_title(op): título de la señal. Por defecto "".
 """
-def thresholding(haar_signal, epsilon, signal_title="Imagen"):
+def thresholding(haar_signal, epsilon, signal_title=""):
     if(signal_title != ""):
         print("Aplicando thresholding con epsilon={} a la transformada de Haar de '{}'."
               .format(epsilon, signal_title))
@@ -84,12 +82,12 @@ def thresholding(haar_signal, epsilon, signal_title="Imagen"):
     return threshold_signal
 
 """ Se queda con la mejor aproximación de m-términos.
-Devuelve la imagen después de aplicar el algoritmo.
-- haar_signal: imagen después de la transformada de Haar.
+Devuelve la señal después de aplicar el algoritmo.
+- haar_signal: señal después de la transformada de Haar.
 - m: número de términos que nos vamos a quedar.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- signal_title(op): título de la señal. Por defecto "".
 """
-def m_term(haar_signal, m, signal_title="Imagen"):
+def m_term(haar_signal, m, signal_title=""):
     if(signal_title != ""):
         print("Aplicando algoritmo de m-términos (m={}) a la transformada de Haar de '{}'."
               .format(m, signal_title))
@@ -110,48 +108,45 @@ def m_term(haar_signal, m, signal_title="Imagen"):
 
     return m_term_signal
 
-""" Calcula el error medio de la imagen original y su aproximación.
+""" Calcula el error medio de la señal original y su aproximación.
 Devuelve el error medio.
-- signal: imagen original.
-- back_signal: imagen aproximada.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- signal: señal original.
+- back_signal: señal aproximada.
+- signal_title(op): título de la señal. Por defecto "".
 """
-def error(signal, back_signal, signal_title="Imagen"):
+def error(signal, back_signal, signal_title=""):
     err = 0
 
     for i in range(len(signal)):
-        for j in range(len(signal[0])):
-            err += abs(signal[i]-back_signal[i])
-    err = err / (len(signal)*len(signal[0]))
-
+        err += abs(signal[i]-back_signal[i])
+    err = err / len(signal)
     err = round(err, 4)
     if(signal_title != ""):
         print("Error medio de '{}' y su aproximación: {}.".format(signal_title, err))
 
     return err
 
-""" Recorta una imagen a la de tamaño 2^p*2^q más grande dentro de ella.
-Devuelve la imagen recortada.
-- signal: imagen a recortar.
-- signal_title(op): título de la imagen. Por defecto 'Imagen'.
+""" Recorta una señal a la de tamaño 2^p*2^q más grande dentro de ella.
+Devuelve la señal recortada.
+- signal: señal a recortar.
+- signal_title(op): título de la señal. Por defecto "".
 """
-def crop_signal(signal, sq=False, signal_title="Imagen"):
+def crop_signal(signal, sq=False, signal_title=""):
     p = 2**int(math.log(len(signal), 2))
 
     if(signal_title != ""):
-        print("Recortando imagen '{}' a tamaño {}.".format(signal_title, p))
+        print("Recortando señal '{}' a tamaño {}.".format(signal_title, p))
 
     a = int((len(signal)-p)/2)
 
     return signal[a:(a+p)]
 
-""" Extiende a la imagen de tamaño 2^p*2^q más pequeña dentro de la que cabe.
-Devuelve la imagen extendida.
-- signal: imagen a extender.
-- sq (op): indica si extender de manera cuadrada. Por defecto False.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+""" Extiende a la señal de tamaño 2^p*2^q más pequeña dentro de la que cabe.
+Devuelve la señal extendida.
+- signal: señal a extender.
+- signal_title(op): título de la señal. Por defecto "".
 """
-def extend_signal(signal, sq=False, signal_title="Imagen"):
+def extend_signal(signal, signal_title=""):
     n = math.log(len(signal), 2)
     to_extend = False
 
@@ -175,15 +170,15 @@ def extend_signal(signal, sq=False, signal_title="Imagen"):
     else:
         return signal
 
-""" Recorta una imagen a la de tamaño 2^p*2^q más grande dentro de ella.
-Devuelve la imagen recortada.
-- signal: imagen a recortar.
+""" Recorta una señal a la de tamaño 2^p*2^q más grande dentro de ella.
+Devuelve la señal recortada.
+- signal: señal a recortar.
 - size: tamaño al que recortar.
-- signal_title(op): título de la imagen. Por defecto 'Imagen'.
+- signal_title(op): título de la señal. Por defecto "".
 """
-def crop_size(signal, crop_size, signal_title="Imagen"):
+def crop_size(signal, size, signal_title=""):
     if(signal_title != ""):
-        print("Recortando imagen '{}' a tamaño {}.".format(signal_title, size))
+        print("Recortando señal '{}' a tamaño {}.".format(signal_title, size))
     return signal[:size]
 
 """ Imprime por pantalla el tamaño en bytes de los archivos y el factor de compresión.
@@ -214,38 +209,39 @@ def norm_hn(n):
 """ Experimento greedy a realizar.
 Devuelve la compresión, porcentaje de descarte, ratio de dispersión,
 error medio y factor de compresión.
-- signal_title: título de la imagen.
-- flag: 0 para B/N y 1 color.
+- signal_f: señal.
 - fun: función de aproximación (thresholding, m_term).
 - param: parámetro de la función de aproximación.
+- signal_title(op): título de la señal. Por defecto "".
 - print_mat (op): indica si se deben imprimir las matrices. Por defecto 'False'.
-- show_im (op): indica si mostrar las imágenes. Por defeto 'True'.
-- save_im (op): indica si guardar las imágenes. Por defecto 'True'.
+- show_sig (op): indica si mostrar las imágenes. Por defeto 'True'.
+- save_sig (op): indica si guardar las imágenes. Por defecto 'True'.
 """
-def experiment(signal_title, flag, fun, param, print_mat = False, show_im = True, save_im = True):
+def experiment(signal_f, fun, param, signal_title="", print_mat = False, show_sig = True, save_sig = True):
     print("\n###############################################")
-    print("\tTranformada de Haar de {}".format(signal_title))
+    print("    Tranformada de Haar de {}".format(signal_title))
     print("###############################################\n  ")
-    # SEÑAL
-    size = 1024
-    print("Tamaño de la señal: {}.".format(size))
-    ext = extend_signal(signal, False, signal_title) # solo la extiende si es necesario
+    N = 512
+    puntos = np.linspace(0, 2*np.pi, num=N)
+    signal = np.empty((N), dtype=np.float64)
+    for i in range(N):
+        signal[i] = signal_f(puntos[i])
+    print("Tamaño de la señal: {}.".format(N))
+    ext = extend_signal(signal, signal_title) # solo la extiende si es necesario
 
     # Calculando la transformada de Haar
-    haar_signal = haar_image(ext, signal_title)
+    if(signal_title != ""):
+        print("Calculando la transformada de Haar de la señal '" + signal_title +"'.")
+    haar_signal = haar_transform(ext, [])
     # Aplicándole el algoritmo greedy
     not_zero_before = not_zero(haar_signal, len(signal))
     greedy_signal = fun(haar_signal, param, signal_title)
     not_zero_after = not_zero(greedy_signal, len(signal))
     # Calulando ratio y perc
-    if(len(signal.shape)==2):
-        total = len(signal)*len(signal[0])
-    else:
-        total = len(signal)*len(signal[0])*len(signal[0][0])
-    perc = round(100*(total-not_zero_after)/total, 2)
+    perc = round(100*(N-not_zero_after)/N, 2)
     ratio = round(not_zero_before/not_zero_after, 4)
     if(signal_title != ""):
-        print("Número de píxeles anulados: {} ({}%).".format(total-not_zero_after, perc))
+        print("Número de píxeles anulados: {} ({}%).".format(N-not_zero_after, perc))
         print("Ratio de dispersión: {}.".format(ratio))
     # Comprimimos
     comp_signal, cent = compress_signal(greedy_signal, signal_title)
@@ -256,133 +252,114 @@ def experiment(signal_title, flag, fun, param, print_mat = False, show_im = True
 
     # Descomprimimos
     uncomp_signal = uncompress_signal(comp_signal, cent, signal_title)
-    # Restaurando la imagen original
-    rev_signal = reverse_image(uncomp_signal, signal_title)
+    # Restaurando la señal original
+    if(signal_title != ""):
+        print("Restaurando la señal original de la transformada de Haar de '" + signal_title + "'.")
+    rev_signal = reverse_haar(uncomp_signal[:1], uncomp_signal[1:], 0)
 
-    if(rev_signal.shape != signal.shape): # recorta si hemos extendido
-        rev_signal = crop_size(rev_signal, signal.shape[0], signal.shape[1], signal_title)
+    if(len(rev_signal) != len(signal)): # recorta si hemos extendido
+        rev_signal = crop_size(rev_signal, N, signal_title)
 
     if (print_mat):  # si queremos imprimir las matrices
-        print("\nMatriz de la imagen original:")
+        print("\nMatriz de la señal original:")
         print(signal)
         print("\nMatriz después de la transformada de Haar:")
         print(haar_signal)
         print("\nMatriz después del algoritmo greedy:")
         print(greedy_signal)
+        print("\nMatriz de la compresión:")
+        print(comp_signal)
         print("\nMatriz de la descompresión:")
         print(uncomp_signal)
-        print("\nMatriz de la imagen restaurada:")
+        print("\nMatriz de la señal restaurada:")
         print(rev_signal)
         print()
 
-    # Calulamos el error medio de la imagen original y la revertida
+    # Calulamos el error medio de la señal original y la revertida
     err = error(signal, rev_signal, signal_title)
 
-    # Concatenamos la imagen original y la recuperada para pintarla
-    concat_signal = concat(signal, normaliza(rev_signal, signal_title))
-    if(show_im):
-        show_signal(concat_signal, flag, signal_title, "Haar wavelets")
-
-    if(save_im):    # Guardamos las imágenes
-        save_signal("results/rev" + str(param) + "_" + signal_title, rev_signal, True)
-        save_signal("results/greedy" + str(param) + "_" + signal_title, greedy_signal, False)
-        save_signal("results/concat" + str(param) + "_" + signal_title, concat_signal, False)
+    # Construimos la gráfica
+    if(show_sig or save_sig):
+        plt.plot(puntos, signal, 'k', label=signal_title)
+        plt.plot(puntos, rev_signal, 'r', label="Aproximación")
+        plt.xlabel("Eje x")
+        plt.ylabel("Eje y")
+        plt.legend(loc="lower left")
+        plt.title(signal_title)
+        plt.gcf().canvas.set_window_title('TFG')
+        if(save_sig):    # Guardar
+            plt.savefig("results/graf_" + str(N) + "_" + str(int(10*param)) + "_" + signal_title)
+        if(show_sig):    # Visualizar
+            plt.show()
 
     factor = diff_size(signal, comp_signal)
-
     return comp_signal, perc, ratio, err, factor
 
 ###########################
 ###   COMPRESSION RLE   ###
 ###########################
 
-""" Comprime la imagen greedy_signal.
+""" Comprime la señal greedy_signal.
 Devuelve la compresión como lista y el valor centinela.
-- greedy_signal: imagen de los coeficientes greedy.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- greedy_signal: señal de los coeficientes greedy.
+- signal_title(op): título de la señal. Por defecto "".
 """
-def compress_signal(greedy_signal, signal_title="Imagen"):
+def compress_signal(greedy_signal, signal_title=""):
     comp = []
 
     if(signal_title != ""):
-        print("Comprimiendo imagen de coeficientes de '{}'.".format(signal_title))
+        print("Comprimiendo señal de coeficientes de '{}'.".format(signal_title))
 
-    if(len(greedy_signal.shape)==2):
-        cent = int(np.amax(greedy_signal)) + 1
+    cent = int(np.amax(greedy_signal)) + 1
+    count = 0
 
-        for i in range(len(greedy_signal)):
-            row = []
+    for i in range(len(greedy_signal)-1):
+        if(greedy_signal[i]==0):
+            count +=1
+        elif(count>0):
+            comp.append(cent)
+            comp.append(count)
             count = 0
+            comp.append(greedy_signal[i])
+        else:
+            comp.append(greedy_signal[i])
 
-            for j in range(len(greedy_signal[0])-1):
-                if(greedy_signal[i][j]==0):
-                    count +=1
-                elif(count>0):
-                    row.append(cent)
-                    row.append(count)
-                    count = 0
-                    row.append(greedy_signal[i][j])
-                else:
-                    row.append(greedy_signal[i][j])
-
-            if(count>0):
-                if(greedy_signal[i][-1]==0):
-                    row.append(cent)
-                    row.append(count+1)
-                else:
-                    row.append(cent)
-                    row.append(count)
-                    row.append(greedy_signal[i][-1])
-            else:
-                row.append(greedy_signal[i][-1])
-
-            comp.append(row)
-
+    if(count>0):
+        if(greedy_signal[-1]==0):
+            comp.append(cent)
+            comp.append(count+1)
+        else:
+            comp.append(cent)
+            comp.append(count)
+            comp.append(greedy_signal[-1])
     else:
-        cent = []
-
-        for k in range(len(greedy_signal[0][0])):
-            co, ce = compress_signal(greedy_signal[:,:,k], "")
-            comp.append(co)
-            cent.append(ce)
+        comp.append(greedy_signal[-1])
 
     return comp, cent
 
-""" Descomprime una imagen comprimida. Devuelve la imagen.
-- lists: compresión.
+""" Descomprime una señal comprimida. Devuelve la señal.
+- list: compresión.
 - cent: valor centinela.
-- image_title(op): título de la imagen. Por defecto 'Imagen'.
+- signal_title(op): título de la señal. Por defecto "".
 """
-def uncompress_signal(lists, cent, signal_title="Imagen"):
+def uncompress_signal(list, cent, signal_title=""):
     if(signal_title != ""):
-        print("Descomprimiendo imagen '{}'.".format(signal_title))
+        print("Descomprimiendo señal '{}'.".format(signal_title))
 
-    if(isinstance(cent, list) == False):    # B/N
-        un = []
-        act = False
+    un = []
+    act = False
 
-        for li in lists:
-            row = []
-            for j in range(len(li)):
-                if(act == True):
-                    act = False
-                    for i in range(li[j]):
-                        row.append(0)
-                elif(li[j]!=cent):
-                    row.append(li[j])
-                else:   # li[j]==cent
-                    act = True
+    for j in range(len(list)):
+        if(act == True):
+            act = False
+            for i in range(list[j]):
+                un.append(0)
+        elif(list[j]!=cent):
+            un.append(list[j])
+        else:   # list[j]==cent
+            act = True
 
-            un.append(row)
-        signal = np.array(un)
-
-    else:   # Color
-        for k in range(len(cent)):
-            un = uncompress_signal(lists[k], cent[k], "")
-            if(k==0):
-                signal = np.empty((un.shape[0], un.shape[1], 3))
-            signal[:,:,k] = un
-
+    signal = np.array(un)
     return signal
 
 ########################
@@ -391,36 +368,35 @@ def uncompress_signal(lists, cent, signal_title="Imagen"):
 
 """ Experimento greedy a realizar.
 Devuelve el error, porcentaje de descarte y ratio de descompresión obtenidos.
-- signal: imagen inicial sobre la que realizar el experimento.
+- signal: señal inicial sobre la que realizar el experimento.
 - thr: parámetro de la función de aproximación.
 """
 def experiment_opt(signal, thr):
     ext = extend_signal(signal, False, "") # solo la extiende si es necesario
 
     # Calculando la transformada de Haar
-    haar_signal = haar_image(ext, "")
+    haar_signal = haar_transform(ext, "")
     # Aplicándole el algoritmo greedy
     greedy_signal, perc, ratio = thresholding(haar_signal, thr, "")
-    # Restaurando la imagen original
-    rev_signal = reverse_image(greedy_signal, "")
+    # Restaurando la señal original
+    rev_signal = reverse_haar(greedy_signal, "")
 
     if(rev_signal.shape != signal.shape): # recorta si hemos extendido
         rev_signal = crop_size(rev_signal, signal.shape[0], signal.shape[1], "")
 
-    # Calulamos el error medio de la imagen original y la revertida
+    # Calulamos el error medio de la señal original y la revertida
     err = error(signal, rev_signal, "")
     return err, perc, ratio
 
 """ Optimización del error medio. Devuelve el punto 'knee'.
-- signal_title: título de la imagen.
+- signal_title: título de la señal.
 - flag: 0 para B/N y 1 color.
 """
 def optimization(signal_title, flag):
     print("\n###############################################")
     print("\tOptimizando umbral de {}".format(signal_title))
     print("###############################################\n  ")
-    signal = read_signal("images/" + signal_title, flag)
-    print("Tamaño de la imagen: {}.".format(signal.shape))
+    print("Tamaño de la señal: {}.".format(signal.shape))
     thrs = []; errs = []; pers = []; rats = []
 
     for thr in range(1,20,1):
@@ -480,15 +456,23 @@ def optimization(signal_title, flag):
 
 """ Programa principal. """
 def main():
-    N = 3
+    a=math.sin
+    print(a(0))
+    print(str(0.1))
+    N = 4
     list = [['Ejemplo', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
-         ['Lena', 3.0],
-         ['León', 3.0],]
+         ['Seno en [0,2π]', 0.1],
+         ['Seno en [0,2π]', 1],
+         ['Coseno en [0,2π]', 0.1],
+         ['Coseno en [0,2π]', 1]]
 
     per = np.zeros(N); rat = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 3.0, show_im=False, save_im=False)
-    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 3.0, show_im=False, save_im=False)
+    _, per[0], rat[0], err[0], fac[0] = experiment(math.sin, thresholding, 0.1, "Seno en [0,2π]")
+    _, per[1], rat[1], err[1], fac[1] = experiment(math.sin, thresholding, 1, "Seno en [0,2π]")
+
+    _, per[2], rat[2], err[2], fac[2] = experiment(math.cos, thresholding, 0.1, "Coseno en [0,2π]")
+    _, per[3], rat[3], err[3], fac[3] = experiment(math.cos, thresholding, 1, "Coseno en [0,2π]")
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
