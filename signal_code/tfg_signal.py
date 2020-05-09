@@ -96,14 +96,13 @@ def m_term(haar_signal, m, signal_title=""):
     list = np.zeros(m)
 
     for i in range(len(haar_signal)):
-        for j in range(len(haar_signal[0])):
-            if(m>0):
-                list[i] = abs(haar_signal[i])
-                m -= 1
-            else:
-                val = abs(haar_signal[i])
-                if(np.amin(list) < val):
-                    list[list==np.amin(list)] = val
+        if(m>0):
+            list[i] = abs(haar_signal[i])
+            m -= 1
+        else:
+            val = abs(haar_signal[i])
+            if(np.amin(list) < val):
+                list[list==np.amin(list)] = val
 
     m_term_signal = thresholding(haar_signal, np.amin(list), "")
 
@@ -220,9 +219,9 @@ error medio y factor de compresión.
 - save_sig (op): indica si guardar las imágenes. Por defecto 'True'.
 """
 def experiment(signal_f, N, fun, param, signal_title="", print_mat=False, show_sig=True, save_sig=True):
-    print("\n###############################################")
+    print("\n#####################################################")
     print("    Tranformada de Haar de {}".format(signal_title))
-    print("###############################################\n  ")
+    print("#####################################################\n  ")
     puntos = np.linspace(0, 2*np.pi, num=N)
     signal = np.empty((N), dtype=np.float64)
     for i in range(N):
@@ -292,7 +291,7 @@ def experiment(signal_f, N, fun, param, signal_title="", print_mat=False, show_s
         plt.title(signal_title)
         plt.gcf().canvas.set_window_title('TFG')
         if(save_sig):    # Guardar
-            plt.savefig("results/graf_" + str(N) + "_" + str(int(10*param)) + "_" + signal_title)
+            plt.savefig("results/graf_" + str(N) + "_" + str(int(10*param)) + "_" + signal_title + ".png")
         if(show_sig):    # Visualizar
             plt.show()
 
@@ -418,9 +417,9 @@ def experiment_opt(signal, N, thr):
 """
 def optimization_thr(signal_f, N, signal_title, show_n_save = True):
     if(signal_title!=""):
-        print("\n###############################################")
+        print("\n#####################################################")
         print("    Optimizando umbral de '{}'".format(signal_title))
-        print("###############################################\n  ")
+        print("#####################################################\n  ")
         print("Tamaño de la señal: {}.".format(N))
     puntos = np.linspace(0, 2*np.pi, num=N)
     signal = np.empty((N), dtype=np.float64)
@@ -465,7 +464,7 @@ def optimization_thr(signal_f, N, signal_title, show_n_save = True):
         plt.legend()
         plt.title("Relación porcentaje de descarte - error para '{}'".format(signal_title))
         plt.gcf().canvas.set_window_title('TFG')
-        plt.savefig("results/opt_pers_" + str(N) + "_" + signal_title)
+        plt.savefig("results/opt_pers_" + str(N) + "_" + signal_title + ".png")
         plt.show()
 
         plt.plot(thrs, errs, '-o', linewidth=1)
@@ -475,7 +474,7 @@ def optimization_thr(signal_f, N, signal_title, show_n_save = True):
         plt.legend(loc="lower right")
         plt.title("Relación umbral - error para '{}'".format(signal_title))
         plt.gcf().canvas.set_window_title('TFG')
-        plt.savefig("results/opt_thrs_" + str(N) + "_" + signal_title)
+        plt.savefig("results/opt_thrs_" + str(N) + "_" + signal_title + ".png")
         plt.show()
 
     return opt_thr, kneedle.knee, opt_err
@@ -492,9 +491,9 @@ def optimization_thr(signal_f, N, signal_title, show_n_save = True):
 """
 def optimization_N(signal_f, thr, signal_title, show_n_save = True):
     if(signal_title!=""):
-        print("\n###############################################")
+        print("\n#####################################################")
         print("    Optimizando N de '{}'".format(signal_title))
-        print("###############################################\n  ")
+        print("#####################################################\n  ")
         print("Umbral fijado: {}.".format(thr))
 
     Ns = []; errs = []; pers = []; rats = []
@@ -536,7 +535,7 @@ def optimization_N(signal_f, thr, signal_title, show_n_save = True):
         plt.legend()
         plt.title("Relación N - error para '{}'".format(signal_title))
         plt.gcf().canvas.set_window_title('TFG')
-        plt.savefig("results/opt_N_" + str(N) + "_" + str(int(10*thr)) + "_" + signal_title)
+        plt.savefig("results/opt_N_" + str(N) + "_" + str(int(10*thr)) + "_" + signal_title + ".png")
         plt.show()
 
     return kneedle.knee, opt_err
@@ -551,9 +550,9 @@ def optimization_N(signal_f, thr, signal_title, show_n_save = True):
 - signal_title: título de la señal.
 """
 def optimization_thr_N(signal_f, signal_title):
-    print("\n###############################################")
+    print("\n#####################################################")
     print("    Optimizando umbral y N de '{}'".format(signal_title))
-    print("###############################################\n  ")
+    print("#####################################################\n  ")
     Ns = []; thrs = []; errs = []; pers = [];
 
     for N in range(3,14):
@@ -589,10 +588,46 @@ def optimization_thr_N(signal_f, signal_title):
     plt.legend()
     plt.title("Relación N y umbral - error para '{}'".format(signal_title))
     plt.gcf().canvas.set_window_title('TFG')
-    plt.savefig("results/opt_thrN_" + signal_title)
+    plt.savefig("results/opt_thrN_" + signal_title + ".png")
     plt.show()
 
     return kneedle.knee, opt_thr, opt_err
+
+#########################
+###   ALGUNAS SEÑALES ###
+#########################
+
+""" Señal de la suma de seno y coseno.
+- x: variable a evaluar.
+"""
+def sen_plus_cos(x):
+    return math.sin(x) + math.cos(x)
+
+""" Señal de la diferencia de seno y coseno.
+- x: variable a evaluar.
+"""
+def sen_minus_cos(x):
+    return math.sin(x) - math.cos(x)
+
+""" Señal del producto de seno y coseno.
+- x: variable a evaluar.
+"""
+def sen_plus_cos(x):
+    return math.sin(x) * math.cos(x)
+
+""" Señal de 'xsen(x)+xcos(x)'.
+- x: variable a evaluar.
+"""
+def xsen_plus_xcos(x):
+    return x*math.sin(x) + x*math.cos(x)
+
+""" Test con señales
+"""
+def test(func):
+    experiment(func, 512, thresholding, 0.1, "Señal en [0,2π] (ε=0.1)")
+    experiment(func, 512, thresholding, 0.5, "Señal en [0,2π] (ε=0.5)")
+    experiment(func, 512, thresholding, 1, "Señal en [0,2π] (ε=1)")
+    input("--- Pulsa 'Enter' para continuar ---\n")
 
 
 #######################
@@ -601,20 +636,24 @@ def optimization_thr_N(signal_f, signal_title):
 
 """ Programa principal. """
 def main():
-    N = 4
-    list = [['Ejemplo', 'N', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
-         ['Seno en [0,2π]', 512, 0.1],
-         ['Seno en [0,2π]', 512, 1],
-         ['Coseno en [0,2π]', 512, 0.1],
-         ['Coseno en [0,2π]', 512, 1]]
+    #test(xsen_plus_xcos)
+    N = 6
+    list = [['f', 'Dom(f)', 'N', 'ε', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
+         ['sen', '[0,2π]', 512, 0.1],
+         ['sen', '[0,2π]', 512, 0.5],
+         ['sen', '[0,2π]', 512, 1],
+         ['cos', '[0,2π]', 512, 0.1],
+         ['cos', '[0,2π]', 512, 0.5],
+         ['cos', '[0,2π]', 512, 1]]
 
     per = np.zeros(N); rat = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment(math.sin, 512, thresholding, 0.1, "Seno en [0,2π]")
-    _, per[1], rat[1], err[1], fac[1] = experiment(math.sin, 512, thresholding, 1, "Seno en [0,2π]")
-
-    _, per[2], rat[2], err[2], fac[2] = experiment(math.cos, 512, thresholding, 0.1, "Coseno en [0,2π]")
-    _, per[3], rat[3], err[3], fac[3] = experiment(math.cos, 512, thresholding, 1, "Coseno en [0,2π]")
+    _, per[0], rat[0], err[0], fac[0] = experiment(math.sin, 512, thresholding, 0.1, "Seno en [0,2π] (ε=0.1)")
+    _, per[1], rat[1], err[1], fac[1] = experiment(math.sin, 512, thresholding, 0.5, "Seno en [0,2π] (ε=0.5)")
+    _, per[2], rat[2], err[2], fac[2] = experiment(math.sin, 512, thresholding, 1, "Seno en [0,2π] (ε=1)")
+    _, per[3], rat[3], err[3], fac[3] = experiment(math.cos, 512, thresholding, 0.1, "Coseno en [0,2π] (ε=0.1)")
+    _, per[4], rat[4], err[4], fac[4] = experiment(math.cos, 512, thresholding, 0.5, "Coseno en [0,2π] (ε=0.5)")
+    _, per[5], rat[5], err[5], fac[5] = experiment(math.cos, 512, thresholding, 1, "Coseno en [0,2π] (ε=1)")
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
@@ -631,6 +670,7 @@ def main():
     optimization_N(math.cos, 0.3, "Coseno en [0,2π]")
     optimization_thr_N(math.sin, "Seno en [0,2π]")
     optimization_thr_N(math.cos, "Coseno en [0,2π]")
+
 
 if __name__ == "__main__":
 	main()
