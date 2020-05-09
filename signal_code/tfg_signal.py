@@ -177,9 +177,12 @@ Devuelve la señal recortada.
 - signal_title(op): título de la señal. Por defecto "".
 """
 def crop_size(signal, size, signal_title=""):
-    if(signal_title != ""):
-        print("Recortando señal '{}' a tamaño {}.".format(signal_title, size))
-    return signal[:size]
+    if(len(signal)!=size):
+        if(signal_title != ""):
+            print("Recortando señal '{}' a tamaño {}.".format(signal_title, size))
+        return signal[:size]
+    else:
+        return signal
 
 """ Imprime por pantalla el tamaño en bytes de los archivos y el factor de compresión.
 Devuelve el factor de compresión.
@@ -259,9 +262,8 @@ def experiment(signal_f, N, fun, param, signal_title="", print_mat=False, show_s
     if(signal_title != ""):
         print("Restaurando la señal original de la transformada de Haar de '" + signal_title + "'.")
     rev_signal = reverse_haar(uncomp_signal[:1], uncomp_signal[1:], 0)
-
-    if(len(rev_signal) != len(signal)): # recorta si hemos extendido
-        rev_signal = crop_size(rev_signal, N, signal_title)
+    # Recorta si hemos extendido
+    rev_signal = crop_size(rev_signal, N, signal_title)
 
     if (print_mat):  # si queremos imprimir las matrices
         print("\nMatriz de la señal original:")
@@ -626,7 +628,7 @@ def xsen_plus_xcos(x):
 def test(func):
     experiment(func, 512, thresholding, 0.1, "Señal en [0,2π] (ε=0.1)")
     experiment(func, 512, thresholding, 0.5, "Señal en [0,2π] (ε=0.5)")
-    experiment(func, 512, thresholding, 1, "Señal en [0,2π] (ε=1)")
+    experiment(func, 512, thresholding, 2, "Señal en [0,2π] (ε=2)")
     input("--- Pulsa 'Enter' para continuar ---\n")
 
 
@@ -636,24 +638,24 @@ def test(func):
 
 """ Programa principal. """
 def main():
-    #test(xsen_plus_xcos)
+    test(xsen_plus_xcos)
     N = 6
     list = [['f', 'Dom(f)', 'N', 'ε', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
          ['sen', '[0,2π]', 512, 0.1],
          ['sen', '[0,2π]', 512, 0.5],
-         ['sen', '[0,2π]', 512, 1],
+         ['sen', '[0,2π]', 512, 2],
          ['cos', '[0,2π]', 512, 0.1],
          ['cos', '[0,2π]', 512, 0.5],
-         ['cos', '[0,2π]', 512, 1]]
+         ['cos', '[0,2π]', 512, 2]]
 
     per = np.zeros(N); rat = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
     _, per[0], rat[0], err[0], fac[0] = experiment(math.sin, 512, thresholding, 0.1, "Seno en [0,2π] (ε=0.1)")
     _, per[1], rat[1], err[1], fac[1] = experiment(math.sin, 512, thresholding, 0.5, "Seno en [0,2π] (ε=0.5)")
-    _, per[2], rat[2], err[2], fac[2] = experiment(math.sin, 512, thresholding, 1, "Seno en [0,2π] (ε=1)")
+    _, per[2], rat[2], err[2], fac[2] = experiment(math.sin, 512, thresholding, 2, "Seno en [0,2π] (ε=2)")
     _, per[3], rat[3], err[3], fac[3] = experiment(math.cos, 512, thresholding, 0.1, "Coseno en [0,2π] (ε=0.1)")
     _, per[4], rat[4], err[4], fac[4] = experiment(math.cos, 512, thresholding, 0.5, "Coseno en [0,2π] (ε=0.5)")
-    _, per[5], rat[5], err[5], fac[5] = experiment(math.cos, 512, thresholding, 1, "Coseno en [0,2π] (ε=1)")
+    _, per[5], rat[5], err[5], fac[5] = experiment(math.cos, 512, thresholding, 2, "Coseno en [0,2π] (ε=2)")
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
