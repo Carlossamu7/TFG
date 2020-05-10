@@ -29,6 +29,10 @@ def haar_transform(list, offset):
         return haar_transform(avgs, difs + offset)
 
     else:
+        for i in range(len(list)):
+            list[i] = list[i] / math.sqrt(len(list)+len(offset))
+        for i in range(len(offset)):
+            offset[i] = offset[i] / math.sqrt(len(list)+len(offset))
         return list + offset
 
 """ Calcula la transformada inversa de Haar. Devuelve la lista resultante.
@@ -48,6 +52,8 @@ def reverse_haar(front, the_rest, power):
         power += 1
         return reverse_haar(reverse, the_rest, power)
     else:
+        for i in range(len(reverse)):
+            reverse[i] = reverse[i] * math.sqrt(len(reverse))
         return reverse
 
 """ Cuenta el número de elementos distintos de cero de una señal
@@ -279,7 +285,7 @@ def experiment(signal_f, dom, N, fun, param, signal_title="", print_mat=False, s
 
     # Construimos la gráfica
     if(show_sig or save_sig):
-        plt.plot(puntos, signal, 'k', label=signal_title)
+        plt.plot(puntos, signal, 'k', label="Señal")
         plt.plot(puntos, rev_signal, 'r', label="Aproximación")
         plt.xlabel("Eje x")
         plt.ylabel("Eje y")
@@ -614,6 +620,11 @@ def xsen_plus_xcos(x):
 """ Test con señales
 """
 def test(func):
+    li = np.array([12, 12, 12, 12, 8, 8, 10, 10])
+    ha = haar_transform(li,[])
+    re = reverse_haar(ha[:1],ha[1:],0)
+    print(ha)
+    print(re)
     experiment(func, [0, 2*np.pi], 512, thresholding, 0.1, "Señal en [0,2π] (ε=0.1)")
     experiment(func, [0, 2*np.pi], 512, thresholding, 0.5, "Señal en [0,2π] (ε=0.5)")
     experiment(func, [0, 2*np.pi], 512, thresholding, 2, "Señal en [0,2π] (ε=2)")
@@ -626,15 +637,15 @@ def test(func):
 
 """ Programa principal. """
 def main():
-    #test(xsen_plus_xcos)
+    test(xsen_plus_xcos)
     N = 6
     list = [['f', 'Dom(f)', 'N', 'ε', 'Descartes (%)', 'Error medio', 'Factor de compresión'],
-         ['sen', '[0,2π]', 512, 0.1],
-         ['sen', '[0,2π]', 512, 0.5],
-         ['sen', '[0,2π]', 512, 2],
-         ['cos', '[0,2π]', 512, 0.1],
-         ['cos', '[0,2π]', 512, 0.5],
-         ['cos', '[0,2π]', 512, 2]]
+         ['sen(x)', '[0,2π]', 512, 0.1],
+         ['sen(x)', '[0,2π]', 512, 0.5],
+         ['sen(x)', '[0,2π]', 512, 2],
+         ['xsen(x)+xcos(x)', '[0,2π]', 512, 0.1],
+         ['xsen(x)+xcos(x)', '[0,2π]', 512, 0.5],
+         ['xsen(x)+xcos(x)', '[0,2π]', 512, 2]]
 
     per = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
