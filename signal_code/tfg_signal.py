@@ -210,22 +210,22 @@ def norm_hn(n):
     return 1/math.sqrt(2**k)
 
 """ Experimento greedy a realizar.
-Devuelve la compresión, porcentaje de descarte, ratio de dispersión,
-error medio y factor de compresión.
+Devuelve la compresión, porcentaje de descarte, error medio y factor de compresión.
 - signal_f: señal.
 - N: número de trozos en los que discretizar la señal.
 - fun: función de aproximación (thresholding, m_term).
+- dom: dominio de la señal.
 - param: parámetro de la función de aproximación.
 - signal_title(op): título de la señal. Por defecto "".
 - print_mat (op): indica si se deben imprimir las matrices. Por defecto 'False'.
 - show_sig (op): indica si mostrar las imágenes. Por defeto 'True'.
 - save_sig (op): indica si guardar las imágenes. Por defecto 'True'.
 """
-def experiment(signal_f, N, fun, param, signal_title="", print_mat=False, show_sig=True, save_sig=True):
+def experiment(signal_f, dom, N, fun, param, signal_title="", print_mat=False, show_sig=True, save_sig=True):
     print("\n#####################################################")
     print("    Tranformada de Haar de {}".format(signal_title))
     print("#####################################################\n  ")
-    puntos = np.linspace(0, 2*np.pi, num=N)
+    puntos = np.linspace(dom[0], dom[1], num=N)
     signal = np.empty((N), dtype=np.float64)
     for i in range(N):
         signal[i] = signal_f(puntos[i])
@@ -237,18 +237,12 @@ def experiment(signal_f, N, fun, param, signal_title="", print_mat=False, show_s
         print("Calculando la transformada de Haar de la señal '" + signal_title +"'.")
     haar_signal = haar_transform(ext, [])
     # Aplicándole el algoritmo greedy
-    not_zero_before = not_zero(haar_signal, len(signal))
     greedy_signal = fun(haar_signal, param, signal_title)
     not_zero_after = not_zero(greedy_signal, len(signal))
-    # Calulando ratio y perc
+    # Calulando porcentaje de descarte
     perc = round(100*(N-not_zero_after)/N, 2)
-    if(not_zero_after!=0):
-        ratio = round(not_zero_before/not_zero_after, 4)
-    else:
-        ratio = math.inf
     if(signal_title != ""):
         print("Número de píxeles anulados: {} ({}%).".format(N-not_zero_after, perc))
-        print("Ratio de dispersión: {}.".format(ratio))
     # Comprimimos
     comp_signal, cent = compress_signal(greedy_signal, signal_title)
 
@@ -298,7 +292,7 @@ def experiment(signal_f, N, fun, param, signal_title="", print_mat=False, show_s
             plt.show()
 
     factor = diff_size(signal, comp_signal)
-    return comp_signal, perc, ratio, err, factor
+    return comp_signal, perc, err, factor
 
 ###########################
 ###   COMPRESSION RLE   ###
@@ -372,7 +366,7 @@ def uncompress_signal(list, cent, signal_title=""):
 ####################################
 
 """ Experimento greedy a realizar.
-Devuelve el error, porcentaje de descarte y ratio de descompresión obtenidos.
+Devuelve el error y porcentaje de descarte.
 - signal: señal inicial sobre la que realizar el experimento.
 - N: número de trozos en los que discretizar la señal.
 - thr: parámetro de la función de aproximación.
@@ -382,14 +376,9 @@ def experiment_opt(signal, N, thr):
     # Calculando la transformada de Haar
     haar_signal = haar_transform(ext, [])
     # Aplicándole el algoritmo greedy
-    not_zero_before = not_zero(haar_signal, len(signal))
     greedy_signal = thresholding(haar_signal, thr, "")
     not_zero_after = not_zero(greedy_signal, len(signal))
     perc = round(100*(N-not_zero_after)/N, 2)
-    if(not_zero_after!=0):
-        ratio = round(not_zero_before/not_zero_after, 4)
-    else:
-        ratio = math.inf
     # Restaurando la señal original
     rev_signal = reverse_haar(greedy_signal[:1], greedy_signal[1:], 0)
 
@@ -409,31 +398,32 @@ def experiment_opt(signal, N, thr):
 
     # Calulamos el error medio de la señal original y la revertida
     err = error(signal, rev_signal, "")
-    return err, perc, ratio
+    return err, perc
 
 """ Optimización del error medio. Devuelve el punto 'knee', el umbral y error asociado.
 - signal_f: señal.
+- dom: dominio de la señal.
 - N: número de trozos en los que discretizar la señal.
 - signal_title: título de la señal.
 - show_n_save(op): Flag que indica si mostrar y guardar las gráficas. Por defecto 'True'.
 """
-def optimization_thr(signal_f, N, signal_title, show_n_save = True):
+def optimization_thr(signal_f, dom, N, signal_title, show_n_save = True):
     if(signal_title!=""):
         print("\n#####################################################")
         print("    Optimizando umbral de '{}'".format(signal_title))
         print("#####################################################\n  ")
         print("Tamaño de la señal: {}.".format(N))
-    puntos = np.linspace(0, 2*np.pi, num=N)
+    puntos = np.linspace(dom[0], dom[1], num=N)
     signal = np.empty((N), dtype=np.float64)
     for i in range(N):
         signal[i] = signal_f(puntos[i])
 
-    thrs = []; errs = []; pers = []; rats = []
+    thrs = []; errs = []; pers = [];
 
     for thr in range(1,200,5):
         thr = thr/100
-        err, per, rat = experiment_opt(signal, N, thr)
-        thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
+        err, per = experiment_opt(signal, N, thr)
+        thrs.append(thr); errs.append(err); pers.append(per);
 
     if(signal_title!=""): # Imprimo las listas
         print("Umbrales:")
@@ -442,8 +432,6 @@ def optimization_thr(signal_f, N, signal_title, show_n_save = True):
         print(errs)
         print("Porcentajes de descarte:")
         print(pers)
-        print("Ratios de dispersión:")
-        print(rats)
 
     # Calculo el 'knee'
     kneedle = KneeLocator(pers, errs, S=1.0, curve='convex', direction='increasing')
@@ -487,26 +475,27 @@ def optimization_thr(signal_f, N, signal_title, show_n_save = True):
 
 """ Optimización del error medio. Devuelve el punto 'knee', el umbral y error asociado.
 - signal_f: señal.
+- dom: dominio de la señal.
 - N: número de trozos en los que discretizar la señal.
 - signal_title: título de la señal.
 - show_n_save(op): Flag que indica si mostrar y guardar las gráficas. Por defecto 'True'.
 """
-def optimization_N(signal_f, thr, signal_title, show_n_save = True):
+def optimization_N(signal_f, dom, thr, signal_title, show_n_save = True):
     if(signal_title!=""):
         print("\n#####################################################")
         print("    Optimizando N de '{}'".format(signal_title))
         print("#####################################################\n  ")
         print("Umbral fijado: {}.".format(thr))
 
-    Ns = []; errs = []; pers = []; rats = []
+    Ns = []; errs = []; pers = [];
 
     for N in range(3,15):
-        puntos = np.linspace(0, 2*np.pi, num=2**N)
+        puntos = np.linspace(dom[0], dom[1], num=2**N)
         signal = np.empty((2**N), dtype=np.float64)
         for i in range(2**N):
             signal[i] = signal_f(puntos[i])
-        err, per, rat = experiment_opt(signal, 2**N, thr)
-        Ns.append(2**N); errs.append(err); pers.append(per); rats.append(rat)
+        err, per = experiment_opt(signal, 2**N, thr)
+        Ns.append(2**N); errs.append(err); pers.append(per);
 
     if(signal_title!=""): # Imprimo las listas
         print("Ns:")
@@ -515,8 +504,6 @@ def optimization_N(signal_f, thr, signal_title, show_n_save = True):
         print(errs)
         print("Porcentajes de descarte:")
         print(pers)
-        print("Ratios de dispersión:")
-        print(rats)
 
     # Calculo el 'knee'
     kneedle = KneeLocator(Ns, errs, S=1.0, curve='convex', direction='decreasing')
@@ -548,17 +535,18 @@ def optimization_N(signal_f, thr, signal_title, show_n_save = True):
 
 """ Optimización del error medio. Devuelve el punto 'knee'.
 - signal_f: señal.
+- dom: dominio de la señal.
 - N: número de trozos en los que discretizar la señal.
 - signal_title: título de la señal.
 """
-def optimization_thr_N(signal_f, signal_title):
+def optimization_thr_N(signal_f, dom, signal_title):
     print("\n#####################################################")
     print("    Optimizando umbral y N de '{}'".format(signal_title))
     print("#####################################################\n  ")
     Ns = []; thrs = []; errs = []; pers = [];
 
     for N in range(3,14):
-        thr, per, err = optimization_thr(signal_f, 2**N, "", show_n_save=False)
+        thr, per, err = optimization_thr(signal_f, dom, 2**N, "", show_n_save=False)
         Ns.append(2**N); thrs.append(thr); pers.append(per); errs.append(err);
 
     # Imprimo las listas
@@ -626,9 +614,9 @@ def xsen_plus_xcos(x):
 """ Test con señales
 """
 def test(func):
-    experiment(func, 512, thresholding, 0.1, "Señal en [0,2π] (ε=0.1)")
-    experiment(func, 512, thresholding, 0.5, "Señal en [0,2π] (ε=0.5)")
-    experiment(func, 512, thresholding, 2, "Señal en [0,2π] (ε=2)")
+    experiment(func, [0, 2*np.pi], 512, thresholding, 0.1, "Señal en [0,2π] (ε=0.1)")
+    experiment(func, [0, 2*np.pi], 512, thresholding, 0.5, "Señal en [0,2π] (ε=0.5)")
+    experiment(func, [0, 2*np.pi], 512, thresholding, 2, "Señal en [0,2π] (ε=2)")
     input("--- Pulsa 'Enter' para continuar ---\n")
 
 
@@ -638,9 +626,9 @@ def test(func):
 
 """ Programa principal. """
 def main():
-    test(xsen_plus_xcos)
+    #test(xsen_plus_xcos)
     N = 6
-    list = [['f', 'Dom(f)', 'N', 'ε', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
+    list = [['f', 'Dom(f)', 'N', 'ε', 'Descartes (%)', 'Error medio', 'Factor de compresión'],
          ['sen', '[0,2π]', 512, 0.1],
          ['sen', '[0,2π]', 512, 0.5],
          ['sen', '[0,2π]', 512, 2],
@@ -648,30 +636,29 @@ def main():
          ['cos', '[0,2π]', 512, 0.5],
          ['cos', '[0,2π]', 512, 2]]
 
-    per = np.zeros(N); rat = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
+    per = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment(math.sin, 512, thresholding, 0.1, "Seno en [0,2π] (ε=0.1)")
-    _, per[1], rat[1], err[1], fac[1] = experiment(math.sin, 512, thresholding, 0.5, "Seno en [0,2π] (ε=0.5)")
-    _, per[2], rat[2], err[2], fac[2] = experiment(math.sin, 512, thresholding, 2, "Seno en [0,2π] (ε=2)")
-    _, per[3], rat[3], err[3], fac[3] = experiment(math.cos, 512, thresholding, 0.1, "Coseno en [0,2π] (ε=0.1)")
-    _, per[4], rat[4], err[4], fac[4] = experiment(math.cos, 512, thresholding, 0.5, "Coseno en [0,2π] (ε=0.5)")
-    _, per[5], rat[5], err[5], fac[5] = experiment(math.cos, 512, thresholding, 2, "Coseno en [0,2π] (ε=2)")
+    _, per[0], err[0], fac[0] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.1, "sen(x) en [0,2π] (N=512, ε=0.1)")
+    _, per[1], err[1], fac[1] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.5, "sen(x) en [0,2π] (N=512, ε=0.5)")
+    _, per[2], err[2], fac[2] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 2, "sen(x) en [0,2π] (N=512, ε=2)")
+    _, per[3], err[3], fac[3] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.1, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.1)")
+    _, per[4], err[4], fac[4] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.5, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.5)")
+    _, per[5], err[5], fac[5] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 2, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=2)")
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
-        list[k].append(rat[k-1])
         list[k].append(err[k-1])
         list[k].append(fac[k-1])
 
     print()
     print(tabulate(list, headers='firstrow', tablefmt='fancy_grid'))
 
-    optimization_thr(math.sin, 512, "Seno en [0,2π]")
-    optimization_thr(math.cos, 512, "Coseno en [0,2π]")
-    optimization_N(math.sin, 0.3, "Seno en [0,2π]")
-    optimization_N(math.cos, 0.3, "Coseno en [0,2π]")
-    optimization_thr_N(math.sin, "Seno en [0,2π]")
-    optimization_thr_N(math.cos, "Coseno en [0,2π]")
+    optimization_thr(math.sin, [0, 2*np.pi], 512, "sen(x) en [0,2π]")
+    optimization_thr(xsen_plus_xcos, [0, 2*np.pi], 512, "xsen(x)+xcos(x) en [0,2π]")
+    optimization_N(math.sin, [0, 2*np.pi], 0.3, "sen(x) en [0,2π]")
+    optimization_N(xsen_plus_xcos, [0, 2*np.pi], 0.3, "xsen(x)+xcos(x) en [0,2π]")
+    optimization_thr_N(math.sin, [0, 2*np.pi], "sen(x) en [0,2π]")
+    optimization_thr_N(xsen_plus_xcos, [0, 2*np.pi], "xsen(x)+xcos(x) en [0,2π]")
 
 
 if __name__ == "__main__":

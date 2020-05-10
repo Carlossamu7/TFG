@@ -434,12 +434,15 @@ Devuelve la imagen recortada.
 - img_title(op): título de la imagen. Por defecto "".
 """
 def crop_size(img, rows, cols, img_title=""):
-    if(img_title != ""):
-        if(len(img.shape)==2):
-            print("Recortando imagen '{}' a tamaño ({}, {}).".format(img_title, rows, cols))
-        else:
-            print("Recortando imagen '{}' a tamaño ({}, {}, {}).".format(img_title, rows, cols, 3))
-    return img[:rows, :cols]
+    if(len(img)!=rows or len(img[0]!=cols)):
+        if(img_title != ""):
+            if(len(img.shape)==2):
+                print("Recortando imagen '{}' a tamaño ({}, {}).".format(img_title, rows, cols))
+            else:
+                print("Recortando imagen '{}' a tamaño ({}, {}, {}).".format(img_title, rows, cols, 3))
+        return img[:rows, :cols]
+    else:
+        return img
 
 """ Imprime por pantalla el tamaño en bytes de los archivos y el factor de compresión.
 Devuelve el factor de compresión.
@@ -550,9 +553,8 @@ def experiment(img_title, flag, fun, param, print_mat=False, show_im=True, save_
     uncomp_img = uncompress_img(comp_img, cent, img_title)
     # Restaurando la imagen original
     rev_img = reverse_image(uncomp_img, img_title)
-
-    if(rev_img.shape != img.shape): # recorta si hemos extendido
-        rev_img = crop_size(rev_img, img.shape[0], img.shape[1], img_title)
+    # Recorta si hemos extendido
+    rev_img = crop_size(rev_img, img.shape[0], img.shape[1], img_title)
 
     if (print_mat):  # si queremos imprimir las matrices
         print("\nMatriz de la imagen original:")
@@ -739,9 +741,8 @@ def experiment_opt(img, thr):
         ratio = math.inf
     # Restaurando la imagen original
     rev_img = reverse_image(greedy_img, "")
-
-    if(rev_img.shape != img.shape): # recorta si hemos extendido
-        rev_img = crop_size(rev_img, img.shape[0], img.shape[1], "")
+    # Recorta si hemos extendido
+    rev_img = crop_size(rev_img, img.shape[0], img.shape[1], "")
 
     # Calulamos el error medio de la imagen original y la revertida
     err = error(img, rev_img, "")
@@ -816,6 +817,25 @@ def optimization(img_title, flag):
 
 """ Programa principal. """
 def main():
+    mat = np.array([
+        [12,12,8,8],
+        [12,12,8,8],
+        [10,10,8,8],
+        [10,10,8,8]
+    ])
+
+    mat = np.array([
+        [12, 12, 12, 12, 8, 8, 10, 10],
+        [12, 12, 12, 12, 8, 8, 10, 10],
+        [10, 10, 10, 10, 8, 8, 10, 10],
+        [10, 10, 10, 10, 8, 8, 10, 10],
+        [22, 22, 22, 22, 8, 8, 16, 16],
+        [22, 22, 22, 22, 8, 8, 16, 16],
+        [22, 20, 20, 20, 14, 14, 4, 4],
+        [22, 20, 20, 20, 14, 14, 4, 4]
+    ])
+    print(mat)
+    print(haar_image(mat))
     N = 8
     list = [['Ejemplo', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
          ['Lena', 3.0],
