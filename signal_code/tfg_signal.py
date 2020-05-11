@@ -427,7 +427,7 @@ def optimization_thr(signal_f, dom, N, signal_title, show_n_save = True):
     thrs = []; errs = []; pers = [];
 
     for thr in range(1,200,5):
-        thr = thr/100
+        thr = thr/1000
         err, per = experiment_opt(signal, N, thr)
         thrs.append(thr); errs.append(err); pers.append(per);
 
@@ -495,14 +495,23 @@ def optimization_N(signal_f, dom, thr, signal_title, show_n_save = True):
 
     Ns = []; errs = []; pers = [];
 
-    for N in range(3,15):
+    for N in range(5,15):
         puntos = np.linspace(dom[0], dom[1], num=2**N)
         signal = np.empty((2**N), dtype=np.float64)
         for i in range(2**N):
             signal[i] = signal_f(puntos[i])
         err, per = experiment_opt(signal, 2**N, thr)
-        Ns.append(2**N); errs.append(err); pers.append(per);
+        Ns.append(N); errs.append(err); pers.append(per);
+    """
 
+    for N in range(20,100,10):
+        puntos = np.linspace(dom[0], dom[1], num=2**N)
+        signal = np.empty((N), dtype=np.float64)
+        for i in range(N):
+            signal[i] = signal_f(puntos[i])
+        err, per = experiment_opt(signal, N, thr)
+        Ns.append(N); errs.append(err); pers.append(per);
+    """
     if(signal_title!=""): # Imprimo las listas
         print("Ns:")
         print(Ns)
@@ -551,9 +560,9 @@ def optimization_thr_N(signal_f, dom, signal_title):
     print("#####################################################\n  ")
     Ns = []; thrs = []; errs = []; pers = [];
 
-    for N in range(3,14):
+    for N in range(5,14):
         thr, per, err = optimization_thr(signal_f, dom, 2**N, "", show_n_save=False)
-        Ns.append(2**N); thrs.append(thr); pers.append(per); errs.append(err);
+        Ns.append(N); thrs.append(thr); pers.append(per); errs.append(err);
 
     # Imprimo las listas
     print("Umbrales:")
@@ -625,11 +634,19 @@ def test(func):
     re = reverse_haar(ha[:1],ha[1:],0)
     print(ha)
     print(re)
-    experiment(func, [0, 2*np.pi], 512, thresholding, 0.1, "Señal en [0,2π] (ε=0.1)")
+    experiment(func, [0, 2*np.pi], 512, thresholding, 0, "Señal en [0,2π] (ε=0.1)")
     experiment(func, [0, 2*np.pi], 512, thresholding, 0.5, "Señal en [0,2π] (ε=0.5)")
-    experiment(func, [0, 2*np.pi], 512, thresholding, 2, "Señal en [0,2π] (ε=2)")
+    experiment(func, [0, 2*np.pi], 512, thresholding, 1, "Señal en [0,2π] (ε=2)")
     input("--- Pulsa 'Enter' para continuar ---\n")
 
+def test2(li):
+    #li = np.array([12, 12, 12, 12, 8, 8, 10, 10])
+    ha = haar_transform(li,[])
+    re = reverse_haar(ha[:1],ha[1:],0)
+    print(ha)
+    print(re)
+    print()
+    return re
 
 #######################
 ###       MAIN      ###
@@ -637,7 +654,7 @@ def test(func):
 
 """ Programa principal. """
 def main():
-    test(xsen_plus_xcos)
+    #test(xsen_plus_xcos)
     N = 6
     list = [['f', 'Dom(f)', 'N', 'ε', 'Descartes (%)', 'Error medio', 'Factor de compresión'],
          ['sen(x)', '[0,2π]', 512, 0.1],
@@ -649,12 +666,12 @@ def main():
 
     per = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], err[0], fac[0] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.1, "sen(x) en [0,2π] (N=512, ε=0.1)")
-    _, per[1], err[1], fac[1] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.5, "sen(x) en [0,2π] (N=512, ε=0.5)")
-    _, per[2], err[2], fac[2] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 2, "sen(x) en [0,2π] (N=512, ε=2)")
-    _, per[3], err[3], fac[3] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.1, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.1)")
-    _, per[4], err[4], fac[4] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.5, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.5)")
-    _, per[5], err[5], fac[5] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 2, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=2)")
+    _, per[0], err[0], fac[0] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.005, "sen(x) en [0,2π] (N=512, ε=0.005)")
+    _, per[1], err[1], fac[1] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.02, "sen(x) en [0,2π] (N=512, ε=0.02)")
+    _, per[2], err[2], fac[2] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.08, "sen(x) en [0,2π] (N=512, ε=0.08)")
+    _, per[3], err[3], fac[3] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.005, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.005)")
+    _, per[4], err[4], fac[4] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.02, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.02)")
+    _, per[5], err[5], fac[5] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.08, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.08)")
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
@@ -666,8 +683,8 @@ def main():
 
     optimization_thr(math.sin, [0, 2*np.pi], 512, "sen(x) en [0,2π]")
     optimization_thr(xsen_plus_xcos, [0, 2*np.pi], 512, "xsen(x)+xcos(x) en [0,2π]")
-    optimization_N(math.sin, [0, 2*np.pi], 0.3, "sen(x) en [0,2π]")
-    optimization_N(xsen_plus_xcos, [0, 2*np.pi], 0.3, "xsen(x)+xcos(x) en [0,2π]")
+    optimization_N(math.sin, [0, 2*np.pi], 0.05, "sen(x) en [0,2π]")
+    optimization_N(xsen_plus_xcos, [0, 2*np.pi], 0.15, "xsen(x)+xcos(x) en [0,2π]")
     optimization_thr_N(math.sin, [0, 2*np.pi], "sen(x) en [0,2π]")
     optimization_thr_N(xsen_plus_xcos, [0, 2*np.pi], "xsen(x)+xcos(x) en [0,2π]")
 

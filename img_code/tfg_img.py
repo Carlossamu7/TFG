@@ -157,6 +157,10 @@ def haar_transform(list, offset):
         return haar_transform(avgs, difs + offset)
 
     else:
+        for i in range(len(list)):
+            list[i] = list[i] / math.sqrt(len(list)+len(offset))
+        for i in range(len(offset)):
+            offset[i] = offset[i] / math.sqrt(len(list)+len(offset))
         return list + offset
 
 """ Calcula la transformada de Haar por filas de una imágen.
@@ -197,18 +201,20 @@ def haar_image(img, img_title=""):
 - power: 2 elevado a este exponente me dice el índice de the_rest en la lista.
 """
 def reverse_haar(front, the_rest, power):
-	reverse = []
+    reverse = []
 
-	for i in range(len(front)):
-		reverse.append((front[i] + the_rest[i]) / math.sqrt(2))
-		reverse.append((front[i] - the_rest[i]) / math.sqrt(2))
+    for i in range(len(front)):
+        reverse.append((front[i] + the_rest[i]) / math.sqrt(2))
+        reverse.append((front[i] - the_rest[i]) / math.sqrt(2))
 
-	if(len(the_rest) > len(reverse)):
-		the_rest = the_rest[2**power:]
-		power += 1
-		return reverse_haar(reverse, the_rest, power)
-	else:
-		return reverse
+    if(len(the_rest) > len(reverse)):
+        the_rest = the_rest[2**power:]
+        power += 1
+        return reverse_haar(reverse, the_rest, power)
+    else:
+        for i in range(len(reverse)):
+            reverse[i] = reverse[i] * math.sqrt(len(reverse))
+        return reverse
 
 """ Dada una transformada de Haar de una imagen calcula su inversa por filas.
 Devuelve la inversa por filas.
@@ -434,7 +440,7 @@ Devuelve la imagen recortada.
 - img_title(op): título de la imagen. Por defecto "".
 """
 def crop_size(img, rows, cols, img_title=""):
-    if(len(img)!=rows or len(img[0]!=cols)):
+    if(img.shape[0]!=rows or img.shape[1]!=cols):
         if(img_title != ""):
             if(len(img.shape)==2):
                 print("Recortando imagen '{}' a tamaño ({}, {}).".format(img_title, rows, cols))
@@ -760,10 +766,12 @@ def optimization(img_title, flag):
     print("Tamaño de la imagen: {}.".format(img.shape))
     thrs = []; errs = []; pers = []; rats = []
 
-    for thr in range(1,20,1):
+    for thr in range(1,10,1):
+        thr = thr / 1000
         err, per, rat = experiment_opt(img, thr)
         thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
-    for thr in range(20,40,2):
+    for thr in range(10,30,2):
+        thr = thr / 1000
         err, per, rat = experiment_opt(img, thr)
         thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
 
@@ -835,28 +843,31 @@ def main():
         [22, 20, 20, 20, 14, 14, 4, 4]
     ])
     print(mat)
-    print(haar_image(mat))
+    ha = haar_image(mat)
+    re = reverse_image(ha)
+    print(ha)
+    print(re)
     N = 8
     list = [['Ejemplo', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
-         ['Lena', 3.0],
-         ['León', 3.0],
-         ['Lena', 40.0],
-         ['León', 50.0],
-         ['Lena (color)', 3.0],
-         ['Alhambra', 3.0],
-         ['Lena (color)', 40.0],
-         ['Alhambra', 40.0]]
+         ['Lena', 0.005],
+         ['León', 0.005],
+         ['Lena', 0.05],
+         ['León', 0.05],
+         ['Lena (color)', 0.005],
+         ['Alhambra', 0.005],
+         ['Lena (color)', 0.05],
+         ['Alhambra', 0.05]]
 
     per = np.zeros(N); rat = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 3.0, show_im=False, save_im=False)
-    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 3.0, show_im=False, save_im=False)
-    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, thresholding, 40.0, show_im=False, save_im=False)
-    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 40.0, show_im=False, save_im=False)
-    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 3.0, show_im=False, save_im=False)
-    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 3.0, show_im=False, save_im=False)
-    _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 40.0, show_im=False, save_im=False)
-    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 40.0, show_im=False, save_im=False)
+    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 0.005, show_im=False, save_im=False)
+    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 0.005, show_im=False, save_im=False)
+    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, thresholding, 0.05, show_im=False, save_im=False)
+    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 0.05, show_im=False, save_im=False)
+    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 0.005, show_im=False, save_im=False)
+    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 0.005, show_im=False, save_im=False)
+    _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 0.05, show_im=False, save_im=False)
+    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 0.05, show_im=False, save_im=False)
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
