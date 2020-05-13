@@ -293,7 +293,7 @@ def experiment(signal_f, dom, N, fun, param, signal_title="", print_mat=False, s
         plt.title(signal_title)
         plt.gcf().canvas.set_window_title('TFG')
         if(save_sig):    # Guardar
-            plt.savefig("results/graf_" + str(N) + "_" + str(int(10*param)) + "_" + signal_title + ".png")
+            plt.savefig("results/graf_" + str(N) + "_" + str(int(1000*param)) + "_" + signal_title + ".png")
         if(show_sig):    # Visualizar
             plt.show()
 
@@ -495,23 +495,14 @@ def optimization_N(signal_f, dom, thr, signal_title, show_n_save = True):
 
     Ns = []; errs = []; pers = [];
 
-    for N in range(5,15):
+    for N in range(6,16):
         puntos = np.linspace(dom[0], dom[1], num=2**N)
         signal = np.empty((2**N), dtype=np.float64)
         for i in range(2**N):
             signal[i] = signal_f(puntos[i])
         err, per = experiment_opt(signal, 2**N, thr)
         Ns.append(N); errs.append(err); pers.append(per);
-    """
 
-    for N in range(20,100,10):
-        puntos = np.linspace(dom[0], dom[1], num=2**N)
-        signal = np.empty((N), dtype=np.float64)
-        for i in range(N):
-            signal[i] = signal_f(puntos[i])
-        err, per = experiment_opt(signal, N, thr)
-        Ns.append(N); errs.append(err); pers.append(per);
-    """
     if(signal_title!=""): # Imprimo las listas
         print("Ns:")
         print(Ns)
@@ -539,7 +530,7 @@ def optimization_N(signal_f, dom, thr, signal_title, show_n_save = True):
         plt.legend()
         plt.title("Relación N - error para '{}'".format(signal_title))
         plt.gcf().canvas.set_window_title('TFG')
-        plt.savefig("results/opt_N_" + str(N) + "_" + str(int(10*thr)) + "_" + signal_title + ".png")
+        plt.savefig("results/opt_N_" + str(int(100*thr)) + "_" + signal_title + ".png")
         plt.show()
 
     return kneedle.knee, opt_err
@@ -560,7 +551,7 @@ def optimization_thr_N(signal_f, dom, signal_title):
     print("#####################################################\n  ")
     Ns = []; thrs = []; errs = []; pers = [];
 
-    for N in range(5,14):
+    for N in range(7,16):
         thr, per, err = optimization_thr(signal_f, dom, 2**N, "", show_n_save=False)
         Ns.append(N); thrs.append(thr); pers.append(per); errs.append(err);
 
@@ -640,7 +631,7 @@ def test(func):
     input("--- Pulsa 'Enter' para continuar ---\n")
 
 def test2(li):
-    #li = np.array([12, 12, 12, 12, 8, 8, 10, 10])
+    li = np.array([12, 12, 12, 12, 8, 8, 10, 10])
     ha = haar_transform(li,[])
     re = reverse_haar(ha[:1],ha[1:],0)
     print(ha)
@@ -655,6 +646,7 @@ def test2(li):
 """ Programa principal. """
 def main():
     #test(xsen_plus_xcos)
+    test2()
     N = 6
     list = [['f', 'Dom(f)', 'N', 'ε', 'Descartes (%)', 'Error medio', 'Factor de compresión'],
          ['sen(x)', '[0,2π]', 512, 0.1],
@@ -663,7 +655,7 @@ def main():
          ['xsen(x)+xcos(x)', '[0,2π]', 512, 0.1],
          ['xsen(x)+xcos(x)', '[0,2π]', 512, 0.5],
          ['xsen(x)+xcos(x)', '[0,2π]', 512, 2]]
-
+    """
     per = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
     _, per[0], err[0], fac[0] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.005, "sen(x) en [0,2π] (N=512, ε=0.005)")
@@ -680,13 +672,13 @@ def main():
 
     print()
     print(tabulate(list, headers='firstrow', tablefmt='fancy_grid'))
-
-    optimization_thr(math.sin, [0, 2*np.pi], 512, "sen(x) en [0,2π]")
-    optimization_thr(xsen_plus_xcos, [0, 2*np.pi], 512, "xsen(x)+xcos(x) en [0,2π]")
-    optimization_N(math.sin, [0, 2*np.pi], 0.05, "sen(x) en [0,2π]")
-    optimization_N(xsen_plus_xcos, [0, 2*np.pi], 0.15, "xsen(x)+xcos(x) en [0,2π]")
-    optimization_thr_N(math.sin, [0, 2*np.pi], "sen(x) en [0,2π]")
-    optimization_thr_N(xsen_plus_xcos, [0, 2*np.pi], "xsen(x)+xcos(x) en [0,2π]")
+    """
+    #optimization_thr(math.sin, [0, 2*np.pi], 512, "sen(x)")
+    #optimization_thr(xsen_plus_xcos, [0, 2*np.pi], 512, "xsen(x)+xcos(x)")
+    #optimization_N(math.sin, [0, 2*np.pi], 0.05, "sen(x) en [0,2π]")
+    #optimization_N(xsen_plus_xcos, [0, 2*np.pi], 0.15, "xsen(x)+xcos(x)")
+    optimization_thr_N(math.sin, [0, 2*np.pi], "sen(x)")
+    optimization_thr_N(xsen_plus_xcos, [0, 2*np.pi], "xsen(x)+xcos(x)")
 
 
 if __name__ == "__main__":
