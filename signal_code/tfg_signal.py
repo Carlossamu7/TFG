@@ -68,11 +68,12 @@ def reverse_haar(list, p):
 
     # Redondeo
     for i in range(len(reverse)):
-        reverse[i] = round(reverse[i], 7)
+        reverse[i] = round(reverse[i], 6)
 
     return reverse
 
-""" Calcula la transformada inversa de Haar. Devuelve la lista resultante.
+""" Calcula la transformada inversa de Haar. Es recursivo y ajusta iterativamente
+las particiones. Devuelve la lista resultante.
 - front: primera parte de la lista.
 - the_rest: segunda parte de la lista.
 - power: 2 elevado a este exponente me dice el índice de the_rest en la lista.

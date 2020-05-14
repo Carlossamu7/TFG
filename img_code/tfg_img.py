@@ -142,113 +142,149 @@ def save_img(file_name, img, normalize=False):
 ###   HAAR TRANSFORM   ###
 ##########################
 
+""" Realiza el algoritmo Haar Wavelet de manera. Devuelve una lista con los coeficientes.
+- list: lista a la que hacer el split de haar.
+- p: normalizado en Lp. Si p=0 entonces los coeficientes son sin normalizar.
+"""
+def haar_transform(list, p):
+    if(p==0):
+        val=2
+    else:
+        q_inv = (p-1)/p
+        val = 2**q_inv
+
+    # Función recursiva con las particiones
+    haar = haar_split(list, [], val)
+
+    # Normalizado uniforme
+    if(p!=0):
+        for i in range(len(haar)):
+            haar[i] = haar[i] / (len(haar)**(1/p))
+
+    return haar
+
 """ Realiza el algoritmo Haar Wavelet de manera recursiva realizando las particiones
 adecuadas y calculando sus medias y diferencias. Devuelve una lista con los coeficientes.
 - list: lista a la que hacer el split de haar.
 - offset: parte fija del split.
 """
-def haar_transform(list, offset):
+def haar_split(list, offset, value):
     if(len(list) >= 2):
         avgs = []
         difs = []
         for i in range(0, len(list), 2):
-            avgs.append((list[i] + list[i+1]) / math.sqrt(2))
-            difs.append((list[i] - list[i+1]) / math.sqrt(2))
-        return haar_transform(avgs, difs + offset)
+            avgs.append((list[i] + list[i+1]) / value)
+            difs.append((list[i] - list[i+1]) / value)
+        return haar_split(avgs, difs + offset, value)
 
     else:
-        for i in range(len(list)):
-            list[i] = list[i] / math.sqrt(len(list)+len(offset))
-        for i in range(len(offset)):
-            offset[i] = offset[i] / math.sqrt(len(list)+len(offset))
         return list + offset
 
 """ Calcula la transformada de Haar por filas de una imágen.
 Devuelve los coeficientes de Haar después de aplicar el proceso por filas.
 - img: imagen original a transformar.
+- p: normalización en Lp.
 """
-def haar_row(img):
+def haar_row(img, p):
 	row = []
 	for pixels in img:
-		row.append(haar_transform(pixels, []))
+		row.append(haar_transform(pixels, p))
 	return row
 
 """ Calcula la transformada de Haar una imágen.
 Devuelve la imagen de los coeficientes de Haar.
 - img: imagen original a transformar.
+- p: normalización en Lp.
 - img_title(op): título de la imagen. Por defecto "".
 """
-def haar_image(img, img_title=""):
+def haar_image(img, p, img_title=""):
     if(img_title != ""):
         print("Calculando la transformada de Haar a la imagen '" + img_title +"'.")
 
     if(len(img.shape)==2):
-        by_row = haar_row(img)              # por filas
-        haar_img = zip(*by_row)             # transponemos
-        haar_img = haar_row(haar_img)       # por columnas
-        haar_img = np.array(haar_img)
+        by_row = haar_row(img, p)           # por filas
+        haar_img = np.transpose(by_row)     # transponemos
+        haar_img = haar_row(haar_img, p)    # por columnas
         haar_img = np.transpose(haar_img)   # transponemos
     else:
         haar_img = np.zeros(img.shape)
         for k in range(3):
-            haar_img[:,:,k] = haar_image(img[:,:,k], "")
+            haar_img[:,:,k] = haar_image(img[:,:,k], p, "")
 
     return haar_img
 
 """ Calcula la transformada inversa de Haar. Devuelve la lista resultante.
+- list: lista a invertir.
+- p: normalizado en Lp. Si p=0 entonces los coeficientes son sin normalizar.
+"""
+def reverse_haar(list, p):
+    if(p==0):
+        val=1
+    else:
+        val = 2**(1/p)
+        for i in range(len(list)):
+            list[i] = list[i] * len(list)**(1/p)
+
+    reverse = reverse_split(list[:1], list[1:], 0, val)
+
+    # Redondeo
+    for i in range(len(reverse)):
+        reverse[i] = round(reverse[i], 6)
+
+    return reverse
+
+""" Calcula la transformada inversa de Haar. Es recursivo y ajusta iterativamente
+las particiones. Devuelve la lista resultante.
 - front: primera parte de la lista.
 - the_rest: segunda parte de la lista.
 - power: 2 elevado a este exponente me dice el índice de the_rest en la lista.
+- value: valor necesario para la reconstrucción.
 """
-def reverse_haar(front, the_rest, power):
+def reverse_split(front, the_rest, power, value):
     reverse = []
 
     for i in range(len(front)):
-        reverse.append((front[i] + the_rest[i]) / math.sqrt(2))
-        reverse.append((front[i] - the_rest[i]) / math.sqrt(2))
+        reverse.append((front[i] + the_rest[i]) / value)
+        reverse.append((front[i] - the_rest[i]) / value)
 
     if(len(the_rest) > len(reverse)):
         the_rest = the_rest[2**power:]
         power += 1
-        return reverse_haar(reverse, the_rest, power)
+        return reverse_split(reverse, the_rest, power, value)
     else:
-        for i in range(len(reverse)):
-            reverse[i] = reverse[i] * math.sqrt(len(reverse))
         return reverse
 
 """ Dada una transformada de Haar de una imagen calcula su inversa por filas.
 Devuelve la inversa por filas.
 - haar_img: imagen después de la transformada de Haar.
-- img_title(op): título de la imagen. Por defecto "".
+- p: normalización en Lp.
 """
-def reverse_row(haar_img, img_title=""):
+def reverse_row(haar_img,p):
     row = []
     for pixels in haar_img:
-        row.append(reverse_haar(pixels[:1], pixels[1:], 0))
+        row.append(reverse_haar(pixels, p))
     return row
 
 """ Dada una transformada de Haar de una imagen calcula su inversa.
 Devuelve la imagen original.
 - haar_img: imagen después de la transformada de Haar.
+- p: normalización en Lp.
 - img_title(op): título de la imagen. Por defecto "".
 """
-def reverse_image(haar_img, img_title=""):
+def reverse_image(haar_img, p, img_title=""):
     if(img_title != ""):
         print("Restaurando la imagen original de la transformada de Haar de '" + img_title + "'.")
 
     if(len(haar_img.shape)==2):
-        by_row = reverse_row(haar_img)      # por filas
-        rev_haar = zip(*by_row)             # transponemos
-        rev_haar = reverse_row(rev_haar)    # por columnas
-        rev_haar = np.array(rev_haar)
+        by_row = reverse_row(haar_img, p)   # por filas
+        rev_haar = np.transpose(by_row)     # tranponemos
+        rev_haar = reverse_row(rev_haar, p) # por columnas
         rev_haar = np.transpose(rev_haar)   # tranponemos
 
-        #rev_haar = rev_haar.astype(np.uint8)
-        #rev_haar = rev_haar.astype(np.float64)
     else:
         rev_haar = np.zeros(haar_img.shape)
         for k in range(3):
-            rev_haar[:,:,k] = reverse_image(haar_img[:,:,k], "")
+            rev_haar[:,:,k] = reverse_image(haar_img[:,:,k], p, "")
 
     return rev_haar
 
@@ -517,11 +553,12 @@ error medio y factor de compresión.
 - flag: 0 para B/N y 1 color.
 - fun: función de aproximación (thresholding, m_term).
 - param: parámetro de la función de aproximación.
+- p (op): normalización en Lp. Por defecto p=2.
 - print_mat (op): indica si se deben imprimir las matrices. Por defecto 'False'.
 - show_im (op): indica si mostrar las imágenes. Por defeto 'True'.
 - save_im (op): indica si guardar las imágenes. Por defecto 'True'.
 """
-def experiment(img_title, flag, fun, param, print_mat=False, show_im=True, save_im=True):
+def experiment(img_title, flag, fun, param, p=2, print_mat=False, show_im=True, save_im=True):
     print("\n###############################################")
     print("\tTranformada de Haar de {}".format(img_title))
     print("###############################################\n  ")
@@ -530,7 +567,7 @@ def experiment(img_title, flag, fun, param, print_mat=False, show_im=True, save_
     ext = extend_img(img, False, img_title) # solo la extiende si es necesario
 
     # Calculando la transformada de Haar
-    haar_img = haar_image(ext, img_title)
+    haar_img = haar_image(ext, p, img_title)
     # Aplicándole el algoritmo greedy
     not_zero_before = not_zero(haar_img, len(img), len(img[0]))
     greedy_img = fun(haar_img, param, img_title)
@@ -558,7 +595,7 @@ def experiment(img_title, flag, fun, param, print_mat=False, show_im=True, save_
     # Descomprimimos
     uncomp_img = uncompress_img(comp_img, cent, img_title)
     # Restaurando la imagen original
-    rev_img = reverse_image(uncomp_img, img_title)
+    rev_img = reverse_image(uncomp_img, p, img_title)
     # Recorta si hemos extendido
     rev_img = crop_size(rev_img, img.shape[0], img.shape[1], img_title)
 
@@ -599,8 +636,9 @@ def experiment(img_title, flag, fun, param, print_mat=False, show_im=True, save_
 """ Obtenemos el gradiente de la imagen
 - img_title: título de la imagen.
 - flag: 0 para B/N y 1 color.
+- p (op): normalización en Lp. Por defecto p=0.
 """
-def getDerivates(img_title, flag):
+def getDerivates(img_title, flag, p=0):
     print("\n###############################################")
     print("\tDerivada de '{}'".format(img_title))
     print("###############################################\n  ")
@@ -609,7 +647,7 @@ def getDerivates(img_title, flag):
     ext = extend_img(img, False, img_title) # solo la extiende si es necesario
 
     # Calculando la transformada de Haar
-    haar_img = haar_image(ext, img_title)
+    haar_img = haar_image(ext, p, img_title)
 
     der = haar_img[len(img)//2:, len(img[0])//2:]
 
@@ -725,12 +763,13 @@ def uncompress_img(lists, cent, img_title=""):
 Devuelve el error, porcentaje de descarte y ratio de descompresión obtenidos.
 - img: imagen inicial sobre la que realizar el experimento.
 - thr: parámetro de la función de aproximación.
+- p (op): normalización en Lp. Por defecto p=2.
 """
-def experiment_opt(img, thr):
+def experiment_opt(img, thr, p=2):
     ext = extend_img(img, False, "") # solo la extiende si es necesario
 
     # Calculando la transformada de Haar
-    haar_img = haar_image(ext, "")
+    haar_img = haar_image(ext, p, "")
     # Aplicándole el algoritmo greedy
     not_zero_before = not_zero(haar_img, len(img), len(img[0]))
     greedy_img = thresholding(haar_img, thr, "")
@@ -746,7 +785,7 @@ def experiment_opt(img, thr):
     else:
         ratio = math.inf
     # Restaurando la imagen original
-    rev_img = reverse_image(greedy_img, "")
+    rev_img = reverse_image(greedy_img, p, "")
     # Recorta si hemos extendido
     rev_img = crop_size(rev_img, img.shape[0], img.shape[1], "")
 
@@ -757,8 +796,9 @@ def experiment_opt(img, thr):
 """ Optimización del error medio. Devuelve el punto 'knee' y el umbral y error asociado.
 - img_title: título de la imagen.
 - flag: 0 para B/N y 1 color.
+- p (op): normalización en Lp. Por defecto p=2.
 """
-def optimization(img_title, flag):
+def optimization_thr(img_title, flag, p=2):
     print("\n###############################################")
     print("\tOptimizando umbral de '{}'".format(img_title))
     print("###############################################\n  ")
@@ -768,11 +808,11 @@ def optimization(img_title, flag):
 
     for thr in range(1,10,1):
         thr = thr / 1000
-        err, per, rat = experiment_opt(img, thr)
+        err, per, rat = experiment_opt(img, thr, p)
         thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
     for thr in range(10,30,2):
         thr = thr / 1000
-        err, per, rat = experiment_opt(img, thr)
+        err, per, rat = experiment_opt(img, thr, p)
         thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
 
     # Imprimo las listas
@@ -843,9 +883,9 @@ def main():
         [22, 20, 20, 20, 14, 14, 4, 4]
     ])
     print(mat)
-    ha = haar_image(mat)
-    re = reverse_image(ha)
+    ha = haar_image(mat, 2)
     print(ha)
+    re = reverse_image(ha, 2)
     print(re)
     N = 8
     list = [['Ejemplo', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
@@ -860,14 +900,14 @@ def main():
 
     per = np.zeros(N); rat = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 0.005, show_im=False, save_im=False)
-    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 0.005, show_im=False, save_im=False)
-    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, thresholding, 0.05, show_im=False, save_im=False)
-    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 0.05, show_im=False, save_im=False)
-    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 0.005, show_im=False, save_im=False)
-    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 0.005, show_im=False, save_im=False)
-    _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 0.05, show_im=False, save_im=False)
-    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 0.05, show_im=False, save_im=False)
+    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 0.005, show_im=True, save_im=True)
+    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 0.005, show_im=True, save_im=True)
+    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, thresholding, 0.05, show_im=True, save_im=True)
+    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 0.05, show_im=True, save_im=True)
+    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 0.005, show_im=True, save_im=True)
+    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 0.005, show_im=True, save_im=True)
+    _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 0.05, show_im=True, save_im=True)
+    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 0.05, show_im=True, save_im=True)
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
@@ -880,8 +920,8 @@ def main():
 
     getDerivates("lena.png", 0)
 
-    optimization("lena.png", 0)
-    optimization("alham.png", 1)
+    optimization_thr("lena.png", 0)
+    optimization_thr("alham.png", 1)
 
 if __name__ == "__main__":
 	main()
