@@ -14,46 +14,82 @@ from tabulate import tabulate
 ###   HAAR TRANSFORM   ###
 ##########################
 
+""" Realiza el algoritmo Haar Wavelet de manera. Devuelve una lista con los coeficientes.
+- list: lista a la que hacer el split de haar.
+- p: normalizado en Lp. Si p=0 entonces los coeficientes son sin normalizar.
+"""
+def haar_transform(list, p):
+    if(p==0):
+        val=2
+    else:
+        q_inv = (p-1)/p
+        val = 2**q_inv
+
+    # Función recursiva con las particiones
+    haar = haar_split(list, [], val)
+
+    # Normalizado uniforme
+    if(p!=0):
+        for i in range(len(haar)):
+            haar[i] = haar[i] / (len(haar)**(1/p))
+
+    return haar
+
 """ Realiza el algoritmo Haar Wavelet de manera recursiva realizando las particiones
 adecuadas y calculando sus medias y diferencias. Devuelve una lista con los coeficientes.
 - list: lista a la que hacer el split de haar.
 - offset: parte fija del split.
 """
-def haar_transform(list, offset):
+def haar_split(list, offset, value):
     if(len(list) >= 2):
         avgs = []
         difs = []
         for i in range(0, len(list), 2):
-            avgs.append((list[i] + list[i+1]) / math.sqrt(2))
-            difs.append((list[i] - list[i+1]) / math.sqrt(2))
-        return haar_transform(avgs, difs + offset)
+            avgs.append((list[i] + list[i+1]) / value)
+            difs.append((list[i] - list[i+1]) / value)
+        return haar_split(avgs, difs + offset, value)
 
     else:
-        for i in range(len(list)):
-            list[i] = list[i] / math.sqrt(len(list)+len(offset))
-        for i in range(len(offset)):
-            offset[i] = offset[i] / math.sqrt(len(list)+len(offset))
         return list + offset
+
+""" Calcula la transformada inversa de Haar. Devuelve la lista resultante.
+- list: lista a invertir.
+- p: normalizado en Lp. Si p=0 entonces los coeficientes son sin normalizar.
+"""
+def reverse_haar(list, p):
+    if(p==0):
+        val=1
+    else:
+        val = 2**(1/p)
+        for i in range(len(list)):
+            list[i] = list[i] * len(list)**(1/p)
+
+    reverse = reverse_split(list[:1], list[1:], 0, val)
+
+    # Redondeo
+    for i in range(len(reverse)):
+        reverse[i] = round(reverse[i], 7)
+
+    return reverse
 
 """ Calcula la transformada inversa de Haar. Devuelve la lista resultante.
 - front: primera parte de la lista.
 - the_rest: segunda parte de la lista.
 - power: 2 elevado a este exponente me dice el índice de the_rest en la lista.
+- value: valor necesario para la reconstrucción.
 """
-def reverse_haar(front, the_rest, power):
+def reverse_split(front, the_rest, power, value):
     reverse = []
 
     for i in range(len(front)):
-        reverse.append((front[i] + the_rest[i]) / math.sqrt(2))
-        reverse.append((front[i] - the_rest[i]) / math.sqrt(2))
+        reverse.append((front[i] + the_rest[i]) / value)
+        reverse.append((front[i] - the_rest[i]) / value)
 
     if(len(the_rest) > len(reverse)):
         the_rest = the_rest[2**power:]
         power += 1
-        return reverse_haar(reverse, the_rest, power)
+        return reverse_split(reverse, the_rest, power, value)
     else:
-        for i in range(len(reverse)):
-            reverse[i] = reverse[i] * math.sqrt(len(reverse))
         return reverse
 
 """ Cuenta el número de elementos distintos de cero de una señal
@@ -222,12 +258,13 @@ Devuelve la compresión, porcentaje de descarte, error medio y factor de compres
 - fun: función de aproximación (thresholding, m_term).
 - dom: dominio de la señal.
 - param: parámetro de la función de aproximación.
+- p (op): normalización en Lp. Por defecto p=2.
 - signal_title(op): título de la señal. Por defecto "".
 - print_mat (op): indica si se deben imprimir las matrices. Por defecto 'False'.
 - show_sig (op): indica si mostrar las imágenes. Por defeto 'True'.
 - save_sig (op): indica si guardar las imágenes. Por defecto 'True'.
 """
-def experiment(signal_f, dom, N, fun, param, signal_title="", print_mat=False, show_sig=True, save_sig=True):
+def experiment(signal_f, dom, N, fun, param, p=2, signal_title="", print_mat=False, show_sig=True, save_sig=True):
     print("\n#####################################################")
     print("    Tranformada de Haar de {}".format(signal_title))
     print("#####################################################\n  ")
@@ -241,7 +278,7 @@ def experiment(signal_f, dom, N, fun, param, signal_title="", print_mat=False, s
     # Calculando la transformada de Haar
     if(signal_title != ""):
         print("Calculando la transformada de Haar de la señal '" + signal_title +"'.")
-    haar_signal = haar_transform(ext, [])
+    haar_signal = haar_transform(ext, p)
     # Aplicándole el algoritmo greedy
     greedy_signal = fun(haar_signal, param, signal_title)
     not_zero_after = not_zero(greedy_signal, len(signal))
@@ -261,7 +298,7 @@ def experiment(signal_f, dom, N, fun, param, signal_title="", print_mat=False, s
     # Restaurando la señal original
     if(signal_title != ""):
         print("Restaurando la señal original de la transformada de Haar de '" + signal_title + "'.")
-    rev_signal = reverse_haar(uncomp_signal[:1], uncomp_signal[1:], 0)
+    rev_signal = reverse_haar(uncomp_signal, p)
     # Recorta si hemos extendido
     rev_signal = crop_size(rev_signal, N, signal_title)
 
@@ -376,17 +413,18 @@ Devuelve el error y porcentaje de descarte.
 - signal: señal inicial sobre la que realizar el experimento.
 - N: número de trozos en los que discretizar la señal.
 - thr: parámetro de la función de aproximación.
+- p (op): normalización en Lp. Por defecto p=2.
 """
-def experiment_opt(signal, N, thr):
+def experiment_opt(signal, N, thr, p=2):
     ext = extend_signal(signal, "") # solo la extiende si es necesario
     # Calculando la transformada de Haar
-    haar_signal = haar_transform(ext, [])
+    haar_signal = haar_transform(ext, p)
     # Aplicándole el algoritmo greedy
     greedy_signal = thresholding(haar_signal, thr, "")
     not_zero_after = not_zero(greedy_signal, len(signal))
     perc = round(100*(N-not_zero_after)/N, 2)
     # Restaurando la señal original
-    rev_signal = reverse_haar(greedy_signal[:1], greedy_signal[1:], 0)
+    rev_signal = reverse_haar(greedy_signal, p)
 
     if(len(rev_signal) != len(signal)): # recorta si hemos extendido
         rev_signal = crop_size(rev_signal, N, "")
@@ -551,7 +589,7 @@ def optimization_thr_N(signal_f, dom, signal_title):
     print("#####################################################\n  ")
     Ns = []; thrs = []; errs = []; pers = [];
 
-    for N in range(7,16):
+    for N in range(6,16):
         thr, per, err = optimization_thr(signal_f, dom, 2**N, "", show_n_save=False)
         Ns.append(N); thrs.append(thr); pers.append(per); errs.append(err);
 
@@ -620,24 +658,19 @@ def xsen_plus_xcos(x):
 """ Test con señales
 """
 def test(func):
-    li = np.array([12, 12, 12, 12, 8, 8, 10, 10])
-    ha = haar_transform(li,[])
-    re = reverse_haar(ha[:1],ha[1:],0)
-    print(ha)
-    print(re)
     experiment(func, [0, 2*np.pi], 512, thresholding, 0, "Señal en [0,2π] (ε=0.1)")
     experiment(func, [0, 2*np.pi], 512, thresholding, 0.5, "Señal en [0,2π] (ε=0.5)")
     experiment(func, [0, 2*np.pi], 512, thresholding, 1, "Señal en [0,2π] (ε=2)")
     input("--- Pulsa 'Enter' para continuar ---\n")
 
-def test2(li):
+def test2():
     li = np.array([12, 12, 12, 12, 8, 8, 10, 10])
-    ha = haar_transform(li,[])
-    re = reverse_haar(ha[:1],ha[1:],0)
+    ha = haar_transform(li,0)
+    re = reverse_haar(ha,0)
     print(ha)
     print(re)
     print()
-    return re
+    return ha
 
 #######################
 ###       MAIN      ###
@@ -655,15 +688,15 @@ def main():
          ['xsen(x)+xcos(x)', '[0,2π]', 512, 0.1],
          ['xsen(x)+xcos(x)', '[0,2π]', 512, 0.5],
          ['xsen(x)+xcos(x)', '[0,2π]', 512, 2]]
-    """
+
     per = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], err[0], fac[0] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.005, "sen(x) en [0,2π] (N=512, ε=0.005)")
-    _, per[1], err[1], fac[1] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.02, "sen(x) en [0,2π] (N=512, ε=0.02)")
-    _, per[2], err[2], fac[2] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.08, "sen(x) en [0,2π] (N=512, ε=0.08)")
-    _, per[3], err[3], fac[3] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.005, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.005)")
-    _, per[4], err[4], fac[4] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.02, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.02)")
-    _, per[5], err[5], fac[5] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.08, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.08)")
+    _, per[0], err[0], fac[0] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.005, 2, "sen(x) en [0,2π] (N=512, ε=0.005)")
+    _, per[1], err[1], fac[1] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.02, 2, "sen(x) en [0,2π] (N=512, ε=0.02)")
+    _, per[2], err[2], fac[2] = experiment(math.sin, [0, 2*np.pi], 512, thresholding, 0.08, 2, "sen(x) en [0,2π] (N=512, ε=0.08)")
+    _, per[3], err[3], fac[3] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.005, 2, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.005)")
+    _, per[4], err[4], fac[4] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.02, 2, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.02)")
+    _, per[5], err[5], fac[5] = experiment(xsen_plus_xcos, [0, 2*np.pi], 512, thresholding, 0.08, 2, "xsen(x)+xcos(x) en [0,2π] (N=512, ε=0.08)")
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
@@ -672,11 +705,11 @@ def main():
 
     print()
     print(tabulate(list, headers='firstrow', tablefmt='fancy_grid'))
-    """
-    #optimization_thr(math.sin, [0, 2*np.pi], 512, "sen(x)")
-    #optimization_thr(xsen_plus_xcos, [0, 2*np.pi], 512, "xsen(x)+xcos(x)")
-    #optimization_N(math.sin, [0, 2*np.pi], 0.05, "sen(x) en [0,2π]")
-    #optimization_N(xsen_plus_xcos, [0, 2*np.pi], 0.15, "xsen(x)+xcos(x)")
+
+    optimization_thr(math.sin, [0, 2*np.pi], 512, "sen(x)")
+    optimization_thr(xsen_plus_xcos, [0, 2*np.pi], 512, "xsen(x)+xcos(x)")
+    optimization_N(math.sin, [0, 2*np.pi], 0.05, "sen(x) en [0,2π]")
+    optimization_N(xsen_plus_xcos, [0, 2*np.pi], 0.15, "xsen(x)+xcos(x)")
     optimization_thr_N(math.sin, [0, 2*np.pi], "sen(x)")
     optimization_thr_N(xsen_plus_xcos, [0, 2*np.pi], "xsen(x)+xcos(x)")
 
