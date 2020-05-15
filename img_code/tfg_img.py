@@ -150,8 +150,7 @@ def haar_transform(list, p):
     if(p==0):
         val=2
     else:
-        q_inv = (p-1)/p
-        val = 2**q_inv
+        val = 2**((p-1)/p)
 
     # Función recursiva con las particiones
     haar = haar_split(list, [], val)
@@ -838,7 +837,7 @@ def optimization_thr(img_title, flag, p=2):
 
     # Imprimo las gráficas
     plt.plot(pers, errs, '-o', linewidth=1)
-    plt.vlines(kneedle.knee, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Punto 'knee'")
+    plt.vlines(kneedle.knee, 0, np.amax(errs), linestyles='--', colors='g', label="Punto 'knee'")
     plt.xlabel("Porcentaje de descartados")
     plt.ylabel("Error medio")
     plt.legend()
@@ -848,7 +847,7 @@ def optimization_thr(img_title, flag, p=2):
     plt.show()
 
     plt.plot(thrs, errs, '-o', linewidth=1)
-    plt.vlines(opt_thr, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Umbral del punto 'knee'")
+    plt.vlines(opt_thr, 0, np.amax(errs), linestyles='--', colors='g', label="Umbral del punto 'knee'")
     plt.xlabel("Umbral")
     plt.ylabel("Error medio")
     plt.legend(loc="lower right")
@@ -888,7 +887,7 @@ def main():
     re = reverse_image(ha, 2)
     print(re)
     N = 8
-    list = [['Ejemplo', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
+    list = [['Imagen', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
          ['Lena', 0.005],
          ['León', 0.005],
          ['Lena', 0.05],

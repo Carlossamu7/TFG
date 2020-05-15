@@ -22,8 +22,7 @@ def haar_transform(list, p):
     if(p==0):
         val=2
     else:
-        q_inv = (p-1)/p
-        val = 2**q_inv
+        val = 2**((p-1)/p)
 
     # Función recursiva con las particiones
     haar = haar_split(list, [], val)
@@ -493,7 +492,7 @@ def optimization_thr(signal_f, dom, N, signal_title, show_n_save = True):
 
     if(show_n_save):# Imprimo las gráficas
         plt.plot(pers, errs, '-o', linewidth=1)
-        plt.vlines(kneedle.knee, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Punto 'knee'")
+        plt.vlines(kneedle.knee, 0, np.amax(errs), linestyles='--', colors='g', label="Punto 'knee'")
         plt.xlabel("Porcentaje de descartados")
         plt.ylabel("Error medio")
         plt.legend()
@@ -503,7 +502,7 @@ def optimization_thr(signal_f, dom, N, signal_title, show_n_save = True):
         plt.show()
 
         plt.plot(thrs, errs, '-o', linewidth=1)
-        plt.vlines(opt_thr, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Umbral del punto 'knee'")
+        plt.vlines(opt_thr, 0, np.amax(errs), linestyles='--', colors='g', label="Umbral del punto 'knee'")
         plt.xlabel("Umbral")
         plt.ylabel("Error medio")
         plt.legend(loc="lower right")
@@ -532,29 +531,29 @@ def optimization_N(signal_f, dom, thr, signal_title, show_n_save = True):
         print("#####################################################\n  ")
         print("Umbral fijado: {}.".format(thr))
 
-    Ns = []; errs = []; pers = [];
+    ns = []; errs = []; pers = [];
 
-    for N in range(6,16):
-        puntos = np.linspace(dom[0], dom[1], num=2**N)
-        signal = np.empty((2**N), dtype=np.float64)
-        for i in range(2**N):
+    for n in range(6,16):
+        puntos = np.linspace(dom[0], dom[1], num=2**n)
+        signal = np.empty((2**n), dtype=np.float64)
+        for i in range(2**n):
             signal[i] = signal_f(puntos[i])
-        err, per = experiment_opt(signal, 2**N, thr)
-        Ns.append(N); errs.append(err); pers.append(per);
+        err, per = experiment_opt(signal, 2**n, thr)
+        ns.append(n); errs.append(err); pers.append(per);
 
     if(signal_title!=""): # Imprimo las listas
-        print("Ns:")
-        print(Ns)
+        print("ns:")
+        print(ns)
         print("Errores:")
         print(errs)
         print("Porcentajes de descarte:")
         print(pers)
 
     # Calculo el 'knee'
-    kneedle = KneeLocator(Ns, errs, S=1.0, curve='convex', direction='decreasing')
+    kneedle = KneeLocator(ns, errs, S=1.0, curve='convex', direction='decreasing')
     # Busco el umbral asociado a ese 'knee'
-    for i in range(len(Ns)):
-        if (Ns[i] == kneedle.knee):
+    for i in range(len(ns)):
+        if (ns[i] == kneedle.knee):
             opt_err = errs[i]
 
     if(signal_title!=""):
@@ -562,9 +561,9 @@ def optimization_N(signal_f, dom, thr, signal_title, show_n_save = True):
         print("El error asociado al 'knee' es: {}".format(round(opt_err, 2)))
 
     if(show_n_save):# Imprimo las gráficas
-        plt.plot(Ns, errs, '-o', linewidth=1)
-        plt.vlines(kneedle.knee, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Punto 'knee'")
-        plt.xlabel("N")
+        plt.plot(ns, errs, '-o', linewidth=1)
+        plt.vlines(kneedle.knee, np.amin(errs), np.amax(errs), linestyles='--', colors='g', label="Punto 'knee'")
+        plt.xlabel("n")
         plt.ylabel("Error medio")
         plt.legend()
         plt.title("Relación N - error para '{}'".format(signal_title))
@@ -588,11 +587,11 @@ def optimization_thr_N(signal_f, dom, signal_title):
     print("\n#####################################################")
     print("    Optimizando umbral y N de '{}'".format(signal_title))
     print("#####################################################\n  ")
-    Ns = []; thrs = []; errs = []; pers = [];
+    ns = []; thrs = []; errs = []; pers = [];
 
-    for N in range(6,16):
-        thr, per, err = optimization_thr(signal_f, dom, 2**N, "", show_n_save=False)
-        Ns.append(N); thrs.append(thr); pers.append(per); errs.append(err);
+    for n in range(6,16):
+        thr, per, err = optimization_thr(signal_f, dom, 2**n, "", show_n_save=False)
+        ns.append(n); thrs.append(thr); pers.append(per); errs.append(err);
 
     # Imprimo las listas
     print("Umbrales:")
@@ -603,10 +602,10 @@ def optimization_thr_N(signal_f, dom, signal_title):
     print(errs)
 
     # Calculo el 'knee'
-    kneedle = KneeLocator(Ns, errs, S=1.0, curve='convex', direction='decreasing')
+    kneedle = KneeLocator(ns, errs, S=1.0, curve='convex', direction='decreasing')
     # Busco el umbral asociado a ese 'knee'
-    for i in range(len(Ns)):
-        if (Ns[i] == kneedle.knee):
+    for i in range(len(ns)):
+        if (ns[i] == kneedle.knee):
             opt_err = errs[i]
             opt_thr = thrs[i]
 
@@ -616,9 +615,9 @@ def optimization_thr_N(signal_f, dom, signal_title):
         print("El error asociado al 'knee' es: {}".format(round(opt_err, 2)))
 
     # Imprimo las gráficas
-    plt.plot(Ns, errs, '-o', linewidth=1)
-    plt.vlines(kneedle.knee, 0, np.amax(np.array(errs)), linestyles='--', colors='g', label="Punto 'knee'")
-    plt.xlabel("N")
+    plt.plot(ns, errs, '-o', linewidth=1)
+    plt.vlines(kneedle.knee, np.amin(errs), np.amax(errs), linestyles='--', colors='g', label="Punto 'knee'")
+    plt.xlabel("n")
     plt.ylabel("Error medio")
     plt.legend()
     plt.title("Relación N y umbral - error para '{}'".format(signal_title))
@@ -679,16 +678,14 @@ def test2():
 
 """ Programa principal. """
 def main():
-    #test(xsen_plus_xcos)
-    test2()
     N = 6
-    list = [['f', 'Dom(f)', 'N', 'ε', 'Descartes (%)', 'Error medio', 'Factor de compresión'],
-         ['sen(x)', '[0,2π]', 512, 0.1],
-         ['sen(x)', '[0,2π]', 512, 0.5],
-         ['sen(x)', '[0,2π]', 512, 2],
-         ['xsen(x)+xcos(x)', '[0,2π]', 512, 0.1],
-         ['xsen(x)+xcos(x)', '[0,2π]', 512, 0.5],
-         ['xsen(x)+xcos(x)', '[0,2π]', 512, 2]]
+    list = [['Señal', 'Dom(f)', 'N', 'ε', 'Descartes (%)', 'Error medio', 'Factor de compresión'],
+         ['sen(x)', '[0,2π]', 512, 0.005],
+         ['sen(x)', '[0,2π]', 512, 0.02],
+         ['sen(x)', '[0,2π]', 512, 0.08],
+         ['xsen(x)+xcos(x)', '[0,2π]', 512, 0.005],
+         ['xsen(x)+xcos(x)', '[0,2π]', 512, 0.02],
+         ['xsen(x)+xcos(x)', '[0,2π]', 512, 0.08]]
 
     per = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
@@ -709,8 +706,8 @@ def main():
 
     optimization_thr(math.sin, [0, 2*np.pi], 512, "sen(x)")
     optimization_thr(xsen_plus_xcos, [0, 2*np.pi], 512, "xsen(x)+xcos(x)")
-    optimization_N(math.sin, [0, 2*np.pi], 0.05, "sen(x) en [0,2π]")
-    optimization_N(xsen_plus_xcos, [0, 2*np.pi], 0.15, "xsen(x)+xcos(x)")
+    optimization_N(math.sin, [0, 2*np.pi], 0.1, "sen(x) en [0,2π]")
+    optimization_N(xsen_plus_xcos, [0, 2*np.pi], 0.1, "xsen(x)+xcos(x)")
     optimization_thr_N(math.sin, [0, 2*np.pi], "sen(x)")
     optimization_thr_N(xsen_plus_xcos, [0, 2*np.pi], "xsen(x)+xcos(x)")
 
