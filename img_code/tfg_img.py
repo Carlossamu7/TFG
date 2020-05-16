@@ -622,6 +622,7 @@ def experiment(img_title, flag, fun, param, p=2, print_mat=False, show_im=True, 
     concat_img = concat(img, normaliza(rev_img, img_title))
     if(show_im):
         show_img(concat_img, flag, img_title, "Haar wavelets")
+        show_img(img-rev_img, flag, img_title, "Diferencia entre original y revertida")
 
     if(save_im):    # Guardamos las imágenes
         save_img("results/rev" + str(param) + "_" + img_title, rev_img, True)
@@ -754,9 +755,26 @@ def uncompress_img(lists, cent, img_title=""):
 
     return img
 
-########################
-###   OPTIMIZATION   ###
-########################
+####################################
+###   OPTIMIZATION DE THRESHOLD  ###
+####################################
+
+def m_term2(haar_img, m, img_title=""):
+    if(len(img.shape)==2):
+        total = len(img)*len(img[0])
+    else:
+        total = len(img)*len(img[0])*len(img[0][0])
+    to_discard = total-m
+
+    thr = 0.01
+
+    greedy_img = thresholding(haar_img, thr)
+    not_zero_after = not_zero(greedy_img, len(img), len(img[0]))
+    # Calulando ratio y perc
+
+    discarded = total - not_zero_after
+
+
 
 """ Experimento greedy a realizar.
 Devuelve el error, porcentaje de descarte y ratio de descompresión obtenidos.
@@ -765,13 +783,14 @@ Devuelve el error, porcentaje de descarte y ratio de descompresión obtenidos.
 - p (op): normalización en Lp. Por defecto p=2.
 """
 def experiment_opt(img, thr, p=2):
-    ext = extend_img(img, False, "") # solo la extiende si es necesario
+    ext = extend_img(img, False) # solo la extiende si es necesario
 
     # Calculando la transformada de Haar
-    haar_img = haar_image(ext, p, "")
+    haar_img = haar_image(ext, p)
     # Aplicándole el algoritmo greedy
     not_zero_before = not_zero(haar_img, len(img), len(img[0]))
-    greedy_img = thresholding(haar_img, thr, "")
+    #greedy_img = thresholding(haar_img, thr, "")
+    greedy_img = m_term(haar_img, 20000)
     not_zero_after = not_zero(greedy_img, len(img), len(img[0]))
     # Calulando ratio y perc
     if(len(img.shape)==2):
@@ -784,12 +803,12 @@ def experiment_opt(img, thr, p=2):
     else:
         ratio = math.inf
     # Restaurando la imagen original
-    rev_img = reverse_image(greedy_img, p, "")
+    rev_img = reverse_image(greedy_img, p)
     # Recorta si hemos extendido
-    rev_img = crop_size(rev_img, img.shape[0], img.shape[1], "")
+    rev_img = crop_size(rev_img, img.shape[0], img.shape[1])
 
     # Calulamos el error medio de la imagen original y la revertida
-    err = error(img, rev_img, "")
+    err = error(img, rev_img)
     return err, perc, ratio
 
 """ Optimización del error medio. Devuelve el punto 'knee' y el umbral y error asociado.
@@ -858,12 +877,65 @@ def optimization_thr(img_title, flag, p=2):
 
     return opt_thr, kneedle.knee, opt_err
 
-#######################
-###       MAIN      ###
-#######################
+############################
+###   OPTIMIZATION OF P  ###
+############################
 
-""" Programa principal. """
-def main():
+""" Optimización del error medio. Devuelve el punto 'knee' y el umbral y error asociado.
+- img_title: título de la imagen.
+- flag: 0 para B/N y 1 color.
+- thr (op): umbral. Por defecto thr=2.
+"""
+def optimization_p(img_title, flag, thr=0.1):
+    print("\n###############################################")
+    print("     Optimizando normalización de '{}'".format(img_title))
+    print("###############################################\n  ")
+    img = read_img("images/" + img_title, flag)
+    print("Tamaño de la imagen: {}.".format(img.shape))
+    ps = [0,2,5,10,20,40];
+    errs = []; pers = []; rats = []
+
+    for p in ps:
+        err, per, rat = experiment_opt(img, thr, p)
+        errs.append(err); pers.append(per); rats.append(rat)
+
+    # Imprimo las listas
+    print("Ps:")
+    print(ps)
+    print("Errores:")
+    print(errs)
+    print("Porcentajes de descarte:")
+    print(pers)
+    print("Ratios de dispersión:")
+    print(rats)
+
+    # Busco el mínimo
+    opt_p = ps[0]
+    opt_err = errs[0]
+    for i in range(len(errs)):
+        if (errs[i] < opt_err):
+            opt_p = ps[i]
+            opt_err = errs[i]
+
+    print("El mínimo se alcanza en p={}".format(opt_p))
+    print("El error asociado es: {}".format(opt_err))
+
+    # Imprimo las gráficas
+    plt.plot(ps, errs, '-o', linewidth=1)
+    plt.vlines(opt_p, 0, np.amax(errs), linestyles='--', colors='g', label="Mínimo")
+    plt.xlabel("p")
+    plt.ylabel("Error medio")
+    plt.legend()
+    plt.title("Relación p - error para '{}'".format(img_title))
+    plt.gcf().canvas.set_window_title('TFG')
+    plt.savefig("results/graf_norm_" + img_title)
+    plt.show()
+
+    return opt_p, opt_err
+
+""" Dos ejemplos sobre matrices para la memoria.
+"""
+def test():
     mat = np.array([
         [12,12,8,8],
         [12,12,8,8],
@@ -871,7 +943,7 @@ def main():
         [10,10,8,8]
     ])
 
-    mat = np.array([
+    mat2 = np.array([
         [12, 12, 12, 12, 8, 8, 10, 10],
         [12, 12, 12, 12, 8, 8, 10, 10],
         [10, 10, 10, 10, 8, 8, 10, 10],
@@ -881,11 +953,22 @@ def main():
         [22, 20, 20, 20, 14, 14, 4, 4],
         [22, 20, 20, 20, 14, 14, 4, 4]
     ])
-    print(mat)
     ha = haar_image(mat, 2)
     print(ha)
+    ha2 = haar_image(mat2, 2)
+    print(ha2)
     re = reverse_image(ha, 2)
     print(re)
+    re2 = reverse_image(ha2, 2)
+    print(re2)
+
+#######################
+###       MAIN      ###
+#######################
+
+""" Programa principal. """
+def main():
+    optimization_p("lena.png", 0, 0.05)
     N = 8
     list = [['Imagen', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
          ['Lena', 0.005],
@@ -899,14 +982,14 @@ def main():
 
     per = np.zeros(N); rat = np.zeros(N); err = np.zeros(N); fac = np.zeros(N)
 
-    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 0.005, show_im=True, save_im=True)
-    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 0.005, show_im=True, save_im=True)
-    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, thresholding, 0.05, show_im=True, save_im=True)
-    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 0.05, show_im=True, save_im=True)
-    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 0.005, show_im=True, save_im=True)
-    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 0.005, show_im=True, save_im=True)
-    _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 0.05, show_im=True, save_im=True)
-    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 0.05, show_im=True, save_im=True)
+    _, per[0], rat[0], err[0], fac[0] = experiment("lena.png", 0, thresholding, 0.005, show_im=False, save_im=False)
+    _, per[1], rat[1], err[1], fac[1] = experiment("lion.png", 0, thresholding, 0.005, show_im=False, save_im=False)
+    _, per[2], rat[2], err[2], fac[2] = experiment("lena.png", 0, thresholding, 0.05, show_im=False, save_im=False)
+    _, per[3], rat[3], err[3], fac[3] = experiment("lion.png", 0, thresholding, 0.05, show_im=False, save_im=False)
+    _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 0.005, show_im=False, save_im=False)
+    _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 0.005, show_im=False, save_im=False)
+    _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 0.05, show_im=False, save_im=False)
+    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 0.1, show_im=False, save_im=False)
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
