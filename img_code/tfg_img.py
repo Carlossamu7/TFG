@@ -37,9 +37,9 @@ def read_img(file_name, flag_color = 1):
 
 """ Normaliza una matriz.
 - image: matriz a normalizar.
-- img_title (op): título de la imagen. Por defecto ' '.
+- img_title (op): título de la imagen. Por defecto "".
 """
-def normaliza(image, img_title = " "):
+def normaliza(image, img_title = ""):
     norm = np.copy(image)
     # En caso de que los máximos sean 255 o las mínimos 0 no iteramos en los bucles
     if len(image.shape) == 2:
@@ -310,26 +310,26 @@ def not_zero(img, rows, cols):
 """ Asigna 0 a aquellos elementos que estén por debajo de un umbral.
 Devuelve la imagen después de aplicar el thresholding.
 - haar_img: imagen después de la transformada de Haar.
-- epsilon: valor umbral.
+- threshold: valor umbral.
 - img_title(op): título de la imagen. Por defecto "".
 """
-def thresholding(haar_img, epsilon, img_title=""):
+def thresholding(haar_img, threshold, img_title=""):
     if(img_title != ""):
-        print("Aplicando thresholding con epsilon={} a la transformada de Haar de '{}'."
-              .format(epsilon, img_title))
+        print("Aplicando thresholding con threshold={} a la transformada de Haar de '{}'."
+              .format(threshold, img_title))
     threshold_img = haar_img.copy()
 
     if(len(haar_img.shape)==2):
         for i in range(len(haar_img)):
             for j in range(len(haar_img[0])):
-                if (abs(haar_img[i][j]) < epsilon):
+                if (abs(haar_img[i][j]) < threshold):
                     threshold_img[i][j] = 0.0
 
     else:
         for i in range(len(haar_img)):
             for j in range(len(haar_img[0])):
                 for k in range(len(haar_img[0][0])):
-                    if (abs(haar_img[i][j][k]) < epsilon):
+                    if (abs(haar_img[i][j][k]) < threshold):
                         threshold_img[i][j][k] = 0.0
 
     return threshold_img
@@ -367,6 +367,99 @@ def m_term(haar_img, m, img_title=""):
             m_term_img[:,:,k] = m_term(haar_img[:,:,k], m, "")
 
     return m_term_img
+
+""" Se queda con la mejor aproximación de m-términos.
+Devuelve la imagen después de aplicar el algoritmo.
+- haar_img: imagen después de la transformada de Haar.
+- m: número de términos que nos vamos a quedar.
+- rows: filas para el conteo.
+- cols: columnas para el conteo.
+- img_title(op): título de la imagen. Por defecto "".
+"""
+def m_term2(haar_img, m, rows, cols, img_title=""):
+    if(img_title != ""):
+        print("Aplicando algoritmo de m-términos (v2) (m={}) a la transformada de Haar de '{}'."
+              .format(m, img_title))
+
+    if(len(haar_img.shape)==2):
+        total = rows*cols
+    else:
+        total = rows*cols*3
+    to_discard = total-m
+
+    thr = 0.01
+    next_thr = 0.01
+    it = 0
+    end = False
+
+    greedy_img = thresholding(haar_img, thr)
+    not_zero_after = not_zero(greedy_img, rows, cols)
+    discarded = total - not_zero_after
+    next_discarded = discarded
+
+    while(it<20 and end==False):
+        if(abs(to_discard-next_discarded)<10):
+            end = True
+        if(next_discarded < to_discard):
+            if(next_thr-thr >= 0):
+                thr = next_thr
+                next_thr = thr*2
+            else:
+                end=True
+        else:
+            if(next_thr-thr <= 0):
+                thr = next_thr
+                next_thr = thr/2
+            else:
+                end=True
+
+        it += 1
+        if(end==False):
+            discarded = next_discarded
+            greedy_img = thresholding(haar_img, next_thr)
+            not_zero_after = not_zero(greedy_img, rows, cols)
+            next_discarded = total - not_zero_after
+
+    if(end==False):
+        print("ERROR en fase 1")
+        return 0
+
+    it = 0
+    end = False
+
+    if(discarded<to_discard and to_discard<next_discarded):
+        a = thr; da = discarded
+        b = next_thr; db = next_discarded
+    elif(next_discarded<to_discard and to_discard<discarded):
+        a = next_thr; da = next_discarded
+        b = thr; db = discarded
+    else:
+        print("ERROR")
+
+    thr = (a+b)/2
+    greedy_img = thresholding(haar_img, thr)
+    not_zero_after = not_zero(greedy_img, rows, cols)
+    discarded = total - not_zero_after
+
+    while(it<20 and end==False):
+        if(abs(to_discard-discarded)<10):
+            end = True
+        if(da < to_discard and to_discard < discarded):
+            b=thr
+            thr = (a+thr)/2
+            db = discarded
+        elif(discarded < to_discard and to_discard < db):
+            a=thr
+            thr = (thr+b)/2
+            da = discarded
+
+        it += 1
+        if(end==False):
+            greedy_img = thresholding(haar_img, thr)
+            not_zero_after = not_zero(greedy_img, rows, cols)
+            discarded = total - not_zero_after
+
+    return greedy_img
 
 """ Calcula el error medio de la imagen original y su aproximación.
 Devuelve el error medio.
@@ -620,12 +713,16 @@ def experiment(img_title, flag, fun, param, p=2, print_mat=False, show_im=True, 
 
     # Concatenamos la imagen original y la recuperada para pintarla
     concat_img = concat(img, normaliza(rev_img, img_title))
+    # Calculamos la imagen diferencia entre la original y la revertida
+    dif_img = img-rev_img
+
     if(show_im):
         show_img(concat_img, flag, img_title, "Haar wavelets")
-        show_img(img-rev_img, flag, img_title, "Diferencia entre original y revertida")
+        show_img(dif_img, flag, img_title, "Diferencia entre original y revertida")
 
     if(save_im):    # Guardamos las imágenes
         save_img("results/rev" + str(param) + "_" + img_title, rev_img, True)
+        save_img("results/dif" + str(param) + "_" + img_title, dif_img, True)
         save_img("results/greedy" + str(param) + "_" + img_title, greedy_img, False)
         save_img("results/concat" + str(param) + "_" + img_title, concat_img, False)
 
@@ -759,38 +856,24 @@ def uncompress_img(lists, cent, img_title=""):
 ###   OPTIMIZATION DE THRESHOLD  ###
 ####################################
 
-def m_term2(haar_img, m, img_title=""):
-    if(len(img.shape)==2):
-        total = len(img)*len(img[0])
-    else:
-        total = len(img)*len(img[0])*len(img[0][0])
-    to_discard = total-m
-
-    thr = 0.01
-
-    greedy_img = thresholding(haar_img, thr)
-    not_zero_after = not_zero(greedy_img, len(img), len(img[0]))
-    # Calulando ratio y perc
-
-    discarded = total - not_zero_after
-
-
-
 """ Experimento greedy a realizar.
 Devuelve el error, porcentaje de descarte y ratio de descompresión obtenidos.
 - img: imagen inicial sobre la que realizar el experimento.
-- thr: parámetro de la función de aproximación.
+- fun: función de aproximación (thresholding, m_term).
+- param: parámetro de la función de aproximación.
 - p (op): normalización en Lp. Por defecto p=2.
 """
-def experiment_opt(img, thr, p=2):
+def experiment_opt(img, fun, param, p=2):
     ext = extend_img(img, False) # solo la extiende si es necesario
 
     # Calculando la transformada de Haar
     haar_img = haar_image(ext, p)
     # Aplicándole el algoritmo greedy
     not_zero_before = not_zero(haar_img, len(img), len(img[0]))
-    #greedy_img = thresholding(haar_img, thr, "")
-    greedy_img = m_term(haar_img, 20000)
+    if(fun==m_term2):
+        greedy_img = fun(haar_img, param, len(img), len(img[0]))
+    else:
+        greedy_img = fun(haar_img, param)
     not_zero_after = not_zero(greedy_img, len(img), len(img[0]))
     # Calulando ratio y perc
     if(len(img.shape)==2):
@@ -826,11 +909,11 @@ def optimization_thr(img_title, flag, p=2):
 
     for thr in range(1,10,1):
         thr = thr / 1000
-        err, per, rat = experiment_opt(img, thr, p)
+        err, per, rat = experiment_opt(img, thresholding, thr, p)
         thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
     for thr in range(10,30,2):
         thr = thr / 1000
-        err, per, rat = experiment_opt(img, thr, p)
+        err, per, rat = experiment_opt(img, thresholding, thr, p)
         thrs.append(thr); errs.append(err); pers.append(per); rats.append(rat)
 
     # Imprimo las listas
@@ -884,9 +967,9 @@ def optimization_thr(img_title, flag, p=2):
 """ Optimización del error medio. Devuelve el punto 'knee' y el umbral y error asociado.
 - img_title: título de la imagen.
 - flag: 0 para B/N y 1 color.
-- thr (op): umbral. Por defecto thr=2.
+- m (op): número de términos para la aproximación. Por defecto 50000.
 """
-def optimization_p(img_title, flag, thr=0.1):
+def optimization_p(img_title, flag, m=50000):
     print("\n###############################################")
     print("     Optimizando normalización de '{}'".format(img_title))
     print("###############################################\n  ")
@@ -896,7 +979,7 @@ def optimization_p(img_title, flag, thr=0.1):
     errs = []; pers = []; rats = []
 
     for p in ps:
-        err, per, rat = experiment_opt(img, thr, p)
+        err, per, rat = experiment_opt(img, m_term2, m, p)
         errs.append(err); pers.append(per); rats.append(rat)
 
     # Imprimo las listas
@@ -928,7 +1011,7 @@ def optimization_p(img_title, flag, thr=0.1):
     plt.legend()
     plt.title("Relación p - error para '{}'".format(img_title))
     plt.gcf().canvas.set_window_title('TFG')
-    plt.savefig("results/graf_norm_" + img_title)
+    plt.savefig("results/graf_p_" + img_title)
     plt.show()
 
     return opt_p, opt_err
@@ -968,7 +1051,6 @@ def test():
 
 """ Programa principal. """
 def main():
-    optimization_p("lena.png", 0, 0.05)
     N = 8
     list = [['Imagen', 'Umbral', 'Descartes (%)', 'Ratio dispersión', 'Error medio', 'Factor de compresión'],
          ['Lena', 0.005],
@@ -989,7 +1071,7 @@ def main():
     _, per[4], rat[4], err[4], fac[4] = experiment("lena_color.png", 1, thresholding, 0.005, show_im=False, save_im=False)
     _, per[5], rat[5], err[5], fac[5] = experiment("alham.png", 1, thresholding, 0.005, show_im=False, save_im=False)
     _, per[6], rat[6], err[6], fac[6] = experiment("lena_color.png", 1, thresholding, 0.05, show_im=False, save_im=False)
-    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 0.1, show_im=False, save_im=False)
+    _, per[7], rat[7], err[7], fac[7] = experiment("alham.png", 1, thresholding, 0.05, show_im=False, save_im=True)
 
     for k in range(1,N+1):
         list[k].append(per[k-1])
@@ -1000,10 +1082,16 @@ def main():
     print()
     print(tabulate(list, headers='firstrow', tablefmt='fancy_grid'))
 
+    # Efecto derivada en la imagen de los coeficientes
     getDerivates("lena.png", 0)
 
+    #Optimización de la elección del umbral
     optimization_thr("lena.png", 0)
     optimization_thr("alham.png", 1)
+
+    # Optmización del parámetro p de normalización
+    optimization_p("lena.png", 0, 52428)
+    optimization_p("alham.png", 1, 795600)
 
 if __name__ == "__main__":
 	main()

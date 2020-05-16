@@ -109,17 +109,17 @@ def not_zero(signal, size):
 """ Asigna 0 a aquellos elementos que estén por debajo de un umbral.
 Devuelve la señal después de aplicar el thresholding.
 - haar_signal: señal después de la transformada de Haar.
-- epsilon: valor umbral.
+- threshold: valor umbral.
 - signal_title(op): título de la señal. Por defecto "".
 """
-def thresholding(haar_signal, epsilon, signal_title=""):
+def thresholding(haar_signal, threshold, signal_title=""):
     if(signal_title != ""):
-        print("Aplicando thresholding con epsilon={} a la transformada de Haar de '{}'."
-              .format(epsilon, signal_title))
+        print("Aplicando thresholding con threshold={} a la transformada de Haar de '{}'."
+              .format(threshold, signal_title))
     threshold_signal = haar_signal.copy()
 
     for i in range(len(haar_signal)):
-        if (abs(haar_signal[i]) < epsilon):
+        if (abs(haar_signal[i]) < threshold):
             threshold_signal[i] = 0.0
 
     return threshold_signal
@@ -149,6 +149,94 @@ def m_term(haar_signal, m, signal_title=""):
     m_term_signal = thresholding(haar_signal, np.amin(list), "")
 
     return m_term_signal
+
+""" Se queda con la mejor aproximación de m-términos.
+Devuelve la imagen después de aplicar el algoritmo.
+- haar_signal: imagen después de la transformada de Haar.
+- m: número de términos que nos vamos a quedar.
+- N: número de trozos verdaderos de la señal.
+- signal_title(op): título de la imagen. Por defecto "".
+"""
+def m_term2(haar_signal, m, N, signal_title=""):
+    if(signal_title != ""):
+        print("Aplicando algoritmo de m-términos (v2) (m={}) a la transformada de Haar de '{}'."
+              .format(m, signal_title))
+
+    to_discard = N-m
+
+    thr = 0.01
+    next_thr = 0.01
+    it = 0
+    end = False
+
+    greedy_signal = thresholding(haar_signal, thr)
+    not_zero_after = not_zero(greedy_signal, N)
+    discarded = N - not_zero_after
+    next_discarded = discarded
+
+    while(it<20 and end==False):
+        if(abs(to_discard-next_discarded)<2):
+            end = True
+        if(next_discarded < to_discard):
+            if(next_thr-thr >= 0):
+                thr = next_thr
+                next_thr = thr*2
+            else:
+                end=True
+        else:
+            if(next_thr-thr <= 0):
+                thr = next_thr
+                next_thr = thr/2
+            else:
+                end=True
+
+        it += 1
+        if(end==False):
+            discarded = next_discarded
+            greedy_signal = thresholding(haar_signal, next_thr)
+            not_zero_after = not_zero(greedy_signal, N)
+            next_discarded = N - not_zero_after
+
+    if(end==False):
+        print("ERROR en fase 1")
+        return 0
+
+    it = 0
+    end = False
+
+    if(discarded<to_discard and to_discard<next_discarded):
+        a = thr; da = discarded
+        b = next_thr; db = next_discarded
+    elif(next_discarded<to_discard and to_discard<discarded):
+        a = next_thr; da = next_discarded
+        b = thr; db = discarded
+    else:
+        print("ERROR")
+
+    thr = (a+b)/2
+    greedy_signal = thresholding(haar_signal, thr)
+    not_zero_after = not_zero(greedy_signal, N)
+    discarded = N - not_zero_after
+
+    while(it<20 and end==False):
+        if(abs(to_discard-discarded)<2):
+            end = True
+        if(da < to_discard and to_discard < discarded):
+            b=thr
+            thr = (a+thr)/2
+            db = discarded
+        elif(discarded < to_discard and to_discard < db):
+            a=thr
+            thr = (thr+b)/2
+            da = discarded
+
+        it += 1
+        if(end==False):
+            greedy_signal = thresholding(haar_signal, thr)
+            not_zero_after = not_zero(greedy_signal, N)
+            discarded = N - not_zero_after
+
+    return greedy_signal
 
 """ Calcula el error medio de la señal original y su aproximación.
 Devuelve el error medio.
@@ -412,22 +500,26 @@ def uncompress_signal(list, cent, signal_title=""):
 Devuelve el error y porcentaje de descarte.
 - signal: señal inicial sobre la que realizar el experimento.
 - N: número de trozos en los que discretizar la señal.
-- thr: parámetro de la función de aproximación.
+- fun: función de aproximación (thresholding, m_term).
+- param: parámetro de la función de aproximación.
 - p (op): normalización en Lp. Por defecto p=2.
 """
-def experiment_opt(signal, N, thr, p=2):
-    ext = extend_signal(signal, "") # solo la extiende si es necesario
+def experiment_opt(signal, N, fun, param, p=2):
+    ext = extend_signal(signal) # solo la extiende si es necesario
     # Calculando la transformada de Haar
     haar_signal = haar_transform(ext, p)
     # Aplicándole el algoritmo greedy
-    greedy_signal = thresholding(haar_signal, thr, "")
+    if(fun==m_term2):
+        greedy_signal = fun(haar_signal, param, N)
+    else:
+        greedy_signal = fun(haar_signal, param)
     not_zero_after = not_zero(greedy_signal, len(signal))
     perc = round(100*(N-not_zero_after)/N, 2)
     # Restaurando la señal original
     rev_signal = reverse_haar(greedy_signal, p)
 
     if(len(rev_signal) != len(signal)): # recorta si hemos extendido
-        rev_signal = crop_size(rev_signal, N, "")
+        rev_signal = crop_size(rev_signal, N)
 
     if(False):
         puntos = np.linspace(0, 2*np.pi, num=N)
@@ -441,17 +533,17 @@ def experiment_opt(signal, N, thr, p=2):
         plt.show()
 
     # Calulamos el error medio de la señal original y la revertida
-    err = error(signal, rev_signal, "")
+    err = error(signal, rev_signal)
     return err, perc
 
 """ Optimización del error medio. Devuelve el punto 'knee', el umbral y error asociado.
 - signal_f: señal.
 - dom: dominio de la señal.
-- N: número de trozos en los que discretizar la señal.
-- signal_title: título de la señal.
+- N: número de trozos en los que está discretizada la señal.
+- signal_title (op): título de la señal. Por defecto "".
 - show_n_save(op): Flag que indica si mostrar y guardar las gráficas. Por defecto 'True'.
 """
-def optimization_thr(signal_f, dom, N, signal_title, show_n_save = True):
+def optimization_thr(signal_f, dom, N, signal_title = "", show_n_save = True):
     if(signal_title!=""):
         print("\n#####################################################")
         print("    Optimizando umbral de '{}'".format(signal_title))
@@ -521,10 +613,10 @@ def optimization_thr(signal_f, dom, N, signal_title, show_n_save = True):
 - signal_f: señal.
 - dom: dominio de la señal.
 - N: número de trozos en los que discretizar la señal.
-- signal_title: título de la señal.
+- signal_title (op): título de la señal. Por defecto "".
 - show_n_save(op): Flag que indica si mostrar y guardar las gráficas. Por defecto 'True'.
 """
-def optimization_N(signal_f, dom, thr, signal_title, show_n_save = True):
+def optimization_N(signal_f, dom, thr, signal_title = "", show_n_save = True):
     if(signal_title!=""):
         print("\n#####################################################")
         print("    Optimizando N de '{}'".format(signal_title))
@@ -581,12 +673,13 @@ def optimization_N(signal_f, dom, thr, signal_title, show_n_save = True):
 - signal_f: señal.
 - dom: dominio de la señal.
 - N: número de trozos en los que discretizar la señal.
-- signal_title: título de la señal.
+- signal_title (op): título de la señal. Por defecto "".
 """
-def optimization_thr_N(signal_f, dom, signal_title):
-    print("\n#####################################################")
-    print("    Optimizando umbral y N de '{}'".format(signal_title))
-    print("#####################################################\n  ")
+def optimization_thr_N(signal_f, dom, signal_title = ""):
+    if(signal_title!=""):
+        print("\n#####################################################")
+        print("    Optimizando umbral y N de '{}'".format(signal_title))
+        print("#####################################################\n  ")
     ns = []; thrs = []; errs = []; pers = [];
 
     for n in range(6,16):
@@ -594,12 +687,13 @@ def optimization_thr_N(signal_f, dom, signal_title):
         ns.append(n); thrs.append(thr); pers.append(per); errs.append(err);
 
     # Imprimo las listas
-    print("Umbrales:")
-    print(thrs)
-    print("Porcentajes de descarte:")
-    print(pers)
-    print("Errores:")
-    print(errs)
+    if(signal_title!=""):
+        print("Umbrales:")
+        print(thrs)
+        print("Porcentajes de descarte:")
+        print(pers)
+        print("Errores:")
+        print(errs)
 
     # Calculo el 'knee'
     kneedle = KneeLocator(ns, errs, S=1.0, curve='convex', direction='decreasing')
@@ -626,6 +720,69 @@ def optimization_thr_N(signal_f, dom, signal_title):
     plt.show()
 
     return kneedle.knee, opt_thr, opt_err
+
+############################
+###   OPTIMIZATION OF P  ###
+############################
+
+""" Optimización del error medio. Devuelve el punto 'knee'.
+- signal_f: señal.
+- dom: dominio de la señal.
+- N: número de trozos en los que está discretizada la señal.
+- m (op): número de términos para la aproximación. Por defecto 50000.
+- signal_title (op): título de la señal. Por defecto "".
+"""
+def optimization_p(signal_f, dom, N, m=500, signal_title=""):
+    if(signal_title!=""):
+        print("\n###############################################")
+        print("     Optimizando normalización de '{}'".format(signal_title))
+        print("###############################################\n  ")
+        print("Tamaño de la señal: {}.".format(N))
+    puntos = np.linspace(dom[0], dom[1], num=N)
+    signal = np.empty((N), dtype=np.float64)
+    for i in range(N):
+        signal[i] = signal_f(puntos[i])
+
+    ps = [0,2,5,10,20,40];
+    errs = []; pers = [];
+
+    for p in ps:
+        err, per = experiment_opt(signal, N, m_term2, m, p)
+        errs.append(err); pers.append(per);
+
+    # Imprimo las listas
+    if(signal_title!=""):
+        print("Ps:")
+        print(ps)
+        print("Errores:")
+        print(errs)
+        print("Porcentajes de descarte:")
+        print(pers)
+
+    # Busco el mínimo
+    opt_p = ps[0]
+    opt_err = errs[0]
+    for i in range(len(errs)):
+        if (errs[i] < opt_err):
+            opt_p = ps[i]
+            opt_err = errs[i]
+
+    if(signal_title!=""):
+        print("El mínimo se alcanza en p={}".format(opt_p))
+        print("El error asociado es: {}".format(opt_err))
+
+    # Imprimo las gráficas
+    plt.plot(ps, errs, '-o', linewidth=1)
+    plt.vlines(opt_p, np.amin(errs), np.amax(errs), linestyles='--', colors='g', label="Mínimo")
+    plt.xlabel("p")
+    plt.ylabel("Error medio")
+    plt.legend()
+    plt.title("Relación p - error para '{}'".format(signal_title))
+    plt.gcf().canvas.set_window_title('TFG')
+    plt.savefig("results/opt_p_" + signal_title)
+    plt.show()
+
+    return opt_p, opt_err
 
 #########################
 ###   ALGUNAS SEÑALES ###
@@ -678,6 +835,9 @@ def test2():
 
 """ Programa principal. """
 def main():
+    optimization_p(math.sin, [0, 2*np.pi], 512, 64, "sen(x)")
+    optimization_p(xsen_plus_xcos, [0, 2*np.pi], 512, 64, "xsen(x)+xcos(x)")
+    input("--- Pulsa 'Enter' para continuar ---\n")
     N = 6
     list = [['Señal', 'Dom(f)', 'N', 'ε', 'Descartes (%)', 'Error medio', 'Factor de compresión'],
          ['sen(x)', '[0,2π]', 512, 0.005],
