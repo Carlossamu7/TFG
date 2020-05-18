@@ -558,7 +558,7 @@ def optimization_thr(signal_f, dom, N, signal_title = "", show_n_save = True):
 
     for thr in range(1,200,5):
         thr = thr/1000
-        err, per = experiment_opt(signal, N, thr)
+        err, per = experiment_opt(signal, N, thresholding, thr)
         thrs.append(thr); errs.append(err); pers.append(per);
 
     if(signal_title!=""): # Imprimo las listas
@@ -630,7 +630,7 @@ def optimization_N(signal_f, dom, thr, signal_title = "", show_n_save = True):
         signal = np.empty((2**n), dtype=np.float64)
         for i in range(2**n):
             signal[i] = signal_f(puntos[i])
-        err, per = experiment_opt(signal, 2**n, thr)
+        err, per = experiment_opt(signal, 2**n, thresholding, thr)
         ns.append(n); errs.append(err); pers.append(per);
 
     if(signal_title!=""): # Imprimo las listas
@@ -835,9 +835,6 @@ def test2():
 
 """ Programa principal. """
 def main():
-    optimization_p(math.sin, [0, 2*np.pi], 512, 64, "sen(x)")
-    optimization_p(xsen_plus_xcos, [0, 2*np.pi], 512, 64, "xsen(x)+xcos(x)")
-    input("--- Pulsa 'Enter' para continuar ---\n")
     N = 6
     list = [['Señal', 'Dom(f)', 'N', 'ε', 'Descartes (%)', 'Error medio', 'Factor de compresión'],
          ['sen(x)', '[0,2π]', 512, 0.005],
@@ -864,13 +861,20 @@ def main():
     print()
     print(tabulate(list, headers='firstrow', tablefmt='fancy_grid'))
 
+    #Optimización de la elección del umbral
     optimization_thr(math.sin, [0, 2*np.pi], 512, "sen(x)")
     optimization_thr(xsen_plus_xcos, [0, 2*np.pi], 512, "xsen(x)+xcos(x)")
+
+    # Optmización de la elección de N
     optimization_N(math.sin, [0, 2*np.pi], 0.1, "sen(x) en [0,2π]")
     optimization_N(xsen_plus_xcos, [0, 2*np.pi], 0.1, "xsen(x)+xcos(x)")
-    optimization_thr_N(math.sin, [0, 2*np.pi], "sen(x)")
-    optimization_thr_N(xsen_plus_xcos, [0, 2*np.pi], "xsen(x)+xcos(x)")
 
+    #optimization_thr_N(math.sin, [0, 2*np.pi], "sen(x)")
+    #optimization_thr_N(xsen_plus_xcos, [0, 2*np.pi], "xsen(x)+xcos(x)")
+
+    # Optmización del parámetro p de normalización
+    optimization_p(math.sin, [0, 2*np.pi], 512, 64, "sen(x)")
+    optimization_p(xsen_plus_xcos, [0, 2*np.pi], 512, 64, "xsen(x)+xcos(x)")
 
 if __name__ == "__main__":
 	main()
