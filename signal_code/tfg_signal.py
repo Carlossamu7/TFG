@@ -869,8 +869,8 @@ def main():
     optimization_N(math.sin, [0, 2*np.pi], 0.1, "sen(x) en [0,2π]")
     optimization_N(xsen_plus_xcos, [0, 2*np.pi], 0.1, "xsen(x)+xcos(x)")
 
-    #optimization_thr_N(math.sin, [0, 2*np.pi], "sen(x)")
-    #optimization_thr_N(xsen_plus_xcos, [0, 2*np.pi], "xsen(x)+xcos(x)")
+    optimization_thr_N(math.sin, [0, 2*np.pi], "sen(x)")
+    optimization_thr_N(xsen_plus_xcos, [0, 2*np.pi], "xsen(x)+xcos(x)")
 
     # Optmización del parámetro p de normalización
     optimization_p(math.sin, [0, 2*np.pi], 512, 64, "sen(x)")
