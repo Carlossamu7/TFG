@@ -10,4 +10,4 @@ Repositorio para mi Trabajo Fin de Grado "Desarrollo de algoritmos para la aprox
 
 - El directorio "signal\_code" contiene el trabajo desarrollado sobre compresión de señales, usando también la transformada de Haar discreta.
 
-El proyecto tiene licencia GNU General Public License Version 3.
+El proyecto tiene licencia GNU General Public License version 3.
