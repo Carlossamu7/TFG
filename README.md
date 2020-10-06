@@ -9,3 +9,5 @@ Repositorio para mi Trabajo Fin de Grado "Desarrollo de algoritmos para la aprox
 - El directorio "img\_code" contiene todo el código relacionado al cálculo de la transformada de Haar sobre imágenes así como el conjunto de imágenes usado. El código guarda las imágenes resultado en una carpeta "results" creada dentro de "img\_code".
 
 - El directorio "signal\_code" contiene el trabajo desarrollado sobre compresión de señales, usando también la transformada de Haar discreta.
+
+El proyecto tiene licencia GNU General Public License Version 3.
